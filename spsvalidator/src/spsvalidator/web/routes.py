@@ -41,6 +41,12 @@ def _render_index(**context):
     )
 
 
+def _safe_redirect_target(next_url: str | None) -> str:
+    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+    return url_for("web.index")
+
+
 def _redirect_with_lang(endpoint: str, **values):
     response = make_response(redirect(url_for(endpoint, **values)))
     language = normalize_language(request.cookies.get("lang"))
@@ -98,7 +104,7 @@ def download_csv(history_id: str):
 @web_blueprint.get("/language/<language_code>")
 def set_language(language_code: str):
     language = normalize_language(language_code)
-    redirect_target = request.args.get("next") or url_for("web.index")
+    redirect_target = _safe_redirect_target(request.args.get("next"))
     response = make_response(redirect(redirect_target))
     response.set_cookie("lang", language, max_age=60 * 60 * 24 * 365)
     return response

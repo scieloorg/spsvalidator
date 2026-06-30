@@ -53,6 +53,31 @@ def validate_sps_zip(zip_path: str) -> dict:
     exceptions = []
     issues_by_parent = {}
     for xml_with_pre in XMLWithPre.create(path=zip_path):
+        package = PurePosixPath(xml_with_pre.filename).stem
+        files_in_zip = set(xml_with_pre.files or [])
+
+        for rendition in xml_with_pre.renditions:
+            if rendition["name"] not in files_in_zip:
+                lang = rendition["lang"]
+                rows.append({
+                    "package": package,
+                    "status": "ERROR",
+                    "subject": f"Renditions {lang}",
+                    "message": f"{lang} language is mentioned in the XML but its PDF file not present in the package.",
+                    "data": rendition,
+                })
+
+        for asset in xml_with_pre.assets:
+            if asset["name"] not in files_in_zip:
+                name = asset["name"]
+                rows.append({
+                    "package": package,
+                    "status": "CRITICAL",
+                    "subject": name,
+                    "message": f"{name} file is mentioned in the XML but not present in the package.",
+                    "data": {**asset, "xml_path": xml_with_pre.filename},
+                })
+
         xmltree = xml_with_pre.xmltree
         rules = {"journal_data": _extract_journal_data(xmltree)}
         for result in get_validation_results(xmltree, rules):
@@ -63,27 +88,15 @@ def validate_sps_zip(zip_path: str) -> dict:
                 continue
             if result.get("response") == "OK":
                 continue
-            group = result.get("group", "")
-            item = result.get("item") or ""
-            sub_item = result.get("sub_item") or ""
-            attribute = "/".join(filter(None, [item, sub_item]))
             row = {
-                "group": group,
-                "title": result.get("title"),
-                "parent": result.get("parent"),
-                "parent_id": result.get("parent_id"),
-                "parent_article_type": result.get("parent_article_type"),
-                "item": item,
-                "sub_item": sub_item,
-                "attribute": attribute,
-                "validation_type": result.get("validation_type"),
-                "response": result.get("response"),
-                "expected_value": result.get("expected_value"),
-                "got_value": result.get("got_value"),
-                "advice": result.get("advice"),
+                "package": package,
+                "status": result.get("response"),
+                "subject": result.get("group"),
+                "message": result.get("advice"),
+                "data": dict(result),
             }
             rows.append(row)
-            parent_key = row.get("parent") or row.get("parent_id") or ""
+            parent_key = result.get("parent") or result.get("parent_id") or ""
             if parent_key:
                 issues_by_parent[parent_key] = issues_by_parent.get(parent_key, 0) + 1
     articles = list(_iter_zip_xml_metadata(zip_path))

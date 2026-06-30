@@ -29,9 +29,19 @@ def init_db(db_path: str) -> None:
                 exceptions_count INTEGER NOT NULL,
                 status TEXT NOT NULL,
                 report_json TEXT NOT NULL,
-                exceptions_json TEXT NOT NULL
+                exceptions_json TEXT NOT NULL,
+                critical_count INTEGER NOT NULL DEFAULT 0,
+                error_count INTEGER NOT NULL DEFAULT 0,
+                warning_count INTEGER NOT NULL DEFAULT 0
             )
             """)
+        for col in ("critical_count", "error_count", "warning_count"):
+            try:
+                connection.execute(
+                    f"ALTER TABLE package_validation_history ADD COLUMN {col} INTEGER NOT NULL DEFAULT 0"
+                )
+            except sqlite3.OperationalError:
+                pass
         connection.execute("""
             CREATE TABLE IF NOT EXISTS package_article_snapshot (
                 id TEXT PRIMARY KEY,
@@ -60,13 +70,19 @@ def insert_validation_result(
 ) -> str:
     history_id = str(uuid.uuid4())
     validated_at = datetime.now(UTC).isoformat()
+    status_counts = {"CRITICAL": 0, "ERROR": 0, "WARNING": 0}
+    for row in rows:
+        s = row.get("status", "")
+        if s in status_counts:
+            status_counts[s] += 1
     with sqlite3.connect(db_path) as connection:
         connection.execute(
             """
             INSERT INTO package_validation_history (
                 id, validated_at, package_name, package_sha256, xml_count,
-                issues_count, exceptions_count, status, report_json, exceptions_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                issues_count, exceptions_count, status, report_json, exceptions_json,
+                critical_count, error_count, warning_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 history_id,
@@ -77,8 +93,11 @@ def insert_validation_result(
                 len(rows),
                 len(exceptions),
                 status,
-                json.dumps(_json_safe(rows), ensure_ascii=False),
-                json.dumps(_json_safe(exceptions), ensure_ascii=False),
+                json.dumps(rows, ensure_ascii=False),
+                json.dumps(exceptions, ensure_ascii=False),
+                status_counts["CRITICAL"],
+                status_counts["ERROR"],
+                status_counts["WARNING"],
             ),
         )
         for article in articles:
@@ -110,7 +129,7 @@ def list_validations(db_path: str) -> list[dict]:
         connection.row_factory = sqlite3.Row
         rows = connection.execute("""
             SELECT id, validated_at, package_name, xml_count, issues_count,
-                   exceptions_count, status
+                   exceptions_count, critical_count, error_count, warning_count
             FROM package_validation_history
             ORDER BY datetime(validated_at) DESC
             """).fetchall()

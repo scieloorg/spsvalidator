@@ -4,19 +4,11 @@ import csv
 import io
 
 VALIDATION_CSV_COLUMNS = [
-    "group",
-    "title",
-    "parent",
-    "parent_id",
-    "parent_article_type",
-    "item",
-    "sub_item",
-    "attribute",
-    "validation_type",
-    "response",
-    "expected_value",
-    "got_value",
-    "advice",
+    "package",
+    "status",
+    "subject",
+    "message",
+    "data",
 ]
 
 

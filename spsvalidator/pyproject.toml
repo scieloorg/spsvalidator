@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spsvalidator"
-version = "1.10"
+version = "0.0.1"
 description = "Standalone SPS package validator desktop webapp"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "Flask>=3.0.0",
   "lxml>=5.0.0",
-  "packtools @ git+https://git@github.com/scieloorg/packtools@4.16.5",
+  "packtools @ git+https://git@github.com/scieloorg/packtools@4.16.6",
   "pywebview>=5.1",
   "setuptools>=68,<82",
   "requests>=2.31.0",

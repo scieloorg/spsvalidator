@@ -132,7 +132,12 @@ def test_set_language_switches_ui_text(tmp_path):
     home = client.get("/", headers={"Cookie": "lang=en"})
     html = home.get_data(as_text=True)
     assert "SPS package validation" in html
-    assert "Built for macOS" in html or "Development build" in html
+    assert (
+        "Built for macOS" in html
+        or "Built for Linux" in html
+        or "Built for Windows" in html
+        or "Development build" in html
+    )
 
 
 def test_validate_route_processes_upload(monkeypatch, tmp_path):

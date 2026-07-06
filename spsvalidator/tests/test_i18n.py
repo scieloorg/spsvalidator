@@ -11,4 +11,4 @@ def test_translations_available_for_all_languages():
     for language in ("pt", "en", "es"):
         translations = get_translations(language)
         assert translations["validate_package"]
-        assert translations["footer_built_for_macos"]
+        assert translations["footer_built_for"]

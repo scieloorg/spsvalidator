@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tomllib
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 
@@ -10,9 +11,10 @@ def _load_version() -> str:
         with pyproject_path.open("rb") as file_pointer:
             data = tomllib.load(file_pointer)
         return str(data["project"]["version"])
-    from spsvalidator import build_info
-
-    return build_info.APP_VERSION
+    try:
+        return version("spsvalidator")
+    except PackageNotFoundError:
+        return "0.0.0"
 
 
 __version__ = _load_version()

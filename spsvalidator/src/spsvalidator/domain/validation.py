@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import zipfile
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from spsvalidator.domain.metadata import extract_article_snapshot
 
@@ -32,6 +32,29 @@ def _extract_journal_data(xmltree):
         return {}
 
 
+def _write_html_previews(xmltree, html_dir: str, asset_urls: dict | None) -> list[str]:
+    from lxml import etree
+    from packtools import HTMLGenerator
+
+    tree = etree.ElementTree(xmltree)
+    generator = HTMLGenerator(tree, **(asset_urls or {}))
+    generated_langs = []
+    for lang in generator.languages:
+        try:
+            html_output = generator.generate(lang)
+        except Exception:
+            # XSLT pode falhar para um idioma isolado (XML malformado); os demais seguem.
+            continue
+        out_path = Path(html_dir) / f"{lang}.html"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(etree.tostring(
+            html_output, pretty_print=True, encoding="utf-8",
+            method="html", doctype="<!DOCTYPE html>",
+        ))
+        generated_langs.append(lang)
+    return generated_langs
+
+
 def _iter_zip_xml_metadata(zip_path: str):
     with zipfile.ZipFile(zip_path) as archive:
         for member in archive.infolist():
@@ -43,7 +66,9 @@ def _iter_zip_xml_metadata(zip_path: str):
             yield extract_article_snapshot(archive.read(member), member.filename)
 
 
-def validate_sps_zip(zip_path: str) -> dict:
+def validate_sps_zip(
+    zip_path: str, html_dir: str | None = None, asset_urls: dict | None = None
+) -> dict:
     from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
     from packtools.sps.validation.xml_validator import get_validation_results
 
@@ -79,6 +104,10 @@ def validate_sps_zip(zip_path: str) -> dict:
                 })
 
         xmltree = xml_with_pre.xmltree
+
+        if html_dir:
+            _write_html_previews(xmltree, os.path.join(html_dir, package), asset_urls)
+
         rules = {"journal_data": _extract_journal_data(xmltree)}
         for result in get_validation_results(xmltree, rules):
             if not result:

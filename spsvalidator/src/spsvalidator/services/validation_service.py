@@ -26,7 +26,11 @@ def _compute_status(rows: list[dict], exceptions: list[dict]) -> str:
 
 
 def run_validation(
-    db_path: str, uploaded_file, zip_only_message: str | None = None
+    db_path: str,
+    uploaded_file,
+    zip_only_message: str | None = None,
+    html_base_dir: str | None = None,
+    html_asset_urls: dict | None = None,
 ) -> dict:
     filename = uploaded_file.filename or ""
     if not filename.lower().endswith(".zip"):
@@ -34,7 +38,13 @@ def run_validation(
     with tempfile.TemporaryDirectory(prefix="spsvalidator-") as temp_dir:
         zip_path = os.path.join(temp_dir, Path(filename).name)
         uploaded_file.save(zip_path)
-        result = validate_sps_zip(zip_path)
+        package_sha256 = _sha256_of_file(zip_path)
+        html_dir = (
+            os.path.join(html_base_dir, package_sha256) if html_base_dir else None
+        )
+        result = validate_sps_zip(
+            zip_path, html_dir=html_dir, asset_urls=html_asset_urls
+        )
         rows = result["rows"]
         exceptions = result["exceptions"]
         articles = result["articles"]
@@ -42,7 +52,7 @@ def run_validation(
         history_id = insert_validation_result(
             db_path=db_path,
             package_name=Path(filename).name,
-            package_sha256=_sha256_of_file(zip_path),
+            package_sha256=package_sha256,
             rows=rows,
             exceptions=exceptions,
             articles=articles,

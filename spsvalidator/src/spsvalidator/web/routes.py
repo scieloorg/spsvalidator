@@ -167,6 +167,20 @@ def view_html_preview(history_id: str, xml_stem: str, lang: str):
     return send_from_directory(preview_dir, f"{lang}.html")
 
 
+@web_blueprint.get("/validation/<history_id>/html/<xml_stem>/assets/<path:filename>")
+def html_preview_asset(history_id: str, xml_stem: str, filename: str):
+    details = get_validation_details(current_app.config["DB_PATH"], history_id)
+    if details is None:
+        abort(404)
+    assets_dir = (
+        Path(current_app.config["HTML_PREVIEWS_DIR"])
+        / details["package_sha256"]
+        / xml_stem
+        / "assets"
+    )
+    return send_from_directory(assets_dir, filename)
+
+
 @web_blueprint.get("/language/<language_code>")
 def set_language(language_code: str):
     language = normalize_language(language_code)

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+from pathlib import PurePosixPath
 
-from spsvalidator.domain.zip_parser import iter_zip_article_snapshots, parse_zip_packages
+from spsvalidator.domain.zip_parser import iter_zip_article_snapshots
 
 
 def _extract_journal_data(xmltree):
@@ -30,7 +31,7 @@ def _extract_journal_data(xmltree):
         return {}
 
 
-def validate_sps_zip(zip_path: str) -> dict:
+def validate_sps_zip(zip_path: str, packages: list[tuple[object, set[str]]]) -> dict:
     from packtools.sps.validation.xml_validator import get_validation_results
 
     if not os.path.isfile(zip_path):
@@ -38,11 +39,10 @@ def validate_sps_zip(zip_path: str) -> dict:
     rows = []
     exceptions = []
     issues_by_parent = {}
-    for pkg in parse_zip_packages(zip_path):
-        package = pkg.package
-        files_in_zip = pkg.files_in_zip
+    for xml_with_pre, files_in_zip in packages:
+        package = PurePosixPath(xml_with_pre.filename).stem
 
-        for rendition in pkg.xml_with_pre.renditions:
+        for rendition in xml_with_pre.renditions:
             if rendition["name"] not in files_in_zip:
                 lang = rendition["lang"]
                 rows.append({
@@ -53,7 +53,7 @@ def validate_sps_zip(zip_path: str) -> dict:
                     "data": rendition,
                 })
 
-        for asset in pkg.xml_with_pre.assets:
+        for asset in xml_with_pre.assets:
             name = asset["name"]
             if name not in files_in_zip:
                 rows.append({
@@ -61,10 +61,10 @@ def validate_sps_zip(zip_path: str) -> dict:
                     "status": "CRITICAL",
                     "subject": name,
                     "message": f"{name} file is mentioned in the XML but not present in the package.",
-                    "data": {**asset, "xml_path": pkg.xml_with_pre.filename},
+                    "data": {**asset, "xml_path": xml_with_pre.filename},
                 })
 
-        xmltree = pkg.xmltree
+        xmltree = xml_with_pre.xmltree
         rules = {"journal_data": _extract_journal_data(xmltree)}
         for result in get_validation_results(xmltree, rules):
             if not result:

@@ -17,6 +17,7 @@ from textwrap import dedent
 import pytest
 
 from spsvalidator.domain.validation import validate_sps_zip
+from spsvalidator.domain.zip_parser import parse_zip_packages
 
 
 # ---------------------------------------------------------------------------
@@ -29,6 +30,10 @@ def _make_zip(tmp_path, xml_content: str) -> str:
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("article.xml", xml_content)
     return str(zip_path)
+
+
+def _validate(zip_path: str) -> dict:
+    return validate_sps_zip(zip_path, parse_zip_packages(zip_path))
 
 
 def _rows_groups(result) -> set[str]:
@@ -162,7 +167,7 @@ def test_validation_function_is_called(tmp_path, monkeypatch, group, func_name):
         return original(*args, **kwargs)
 
     monkeypatch.setattr(xml_validations, func_name, spy)
-    validate_sps_zip(_make_zip(tmp_path, _article()))
+    _validate(_make_zip(tmp_path, _article()))
 
     assert called["yes"], f"{func_name} não foi chamada por validate_sps_zip"
 
@@ -185,14 +190,14 @@ def test_table_wrap_sem_label_e_caption_reporta_issue(tmp_path):
           </table-wrap>
         </sec>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "table-wrap" in _rows_groups(result)
 
 
 def test_sec_sem_title_reporta_issue(tmp_path):
     """<sec> sem <title> → packtools reporta issue (via rows ou exceptions)."""
     xml = _article(body="<sec><p>Text without title.</p></sec>")
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "sec" in _all_groups(result)
 
 
@@ -202,7 +207,7 @@ def test_permissions_sem_license_reporta_issue(tmp_path):
         include_permissions=False,
         extra_meta="<permissions><copyright-year>2023</copyright-year></permissions>",
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "permissions" in _rows_groups(result)
 
 
@@ -218,7 +223,7 @@ def test_fig_sem_label_reporta_issue(tmp_path):
           </fig>
         </sec>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "fig" in _rows_groups(result)
 
 
@@ -232,7 +237,7 @@ def test_fn_sem_fn_type_reporta_issue(tmp_path):
           </fn>
         </fn-group>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "fn" in _rows_groups(result)
 
 
@@ -246,7 +251,7 @@ def test_history_sem_received_reporta_issue(tmp_path):
           </date>
         </history>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "history" in _rows_groups(result)
 
 
@@ -261,7 +266,7 @@ def test_list_sem_list_type_reporta_issue(tmp_path):
           </list>
         </sec>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "list" in _all_groups(result)
 
 
@@ -271,7 +276,7 @@ def test_related_article_sem_href_reporta_issue(tmp_path):
         extra_meta="""
         <related-article related-article-type="commentary-article" id="ra1"/>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "related-article" in _rows_groups(result)
 
 
@@ -288,7 +293,7 @@ def test_reference_sem_campos_obrigatorios_reporta_issue(tmp_path):
           </ref>
         </ref-list>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "reference" in _rows_groups(result)
 
 
@@ -301,7 +306,7 @@ def test_ext_link_sem_href_reporta_issue(tmp_path):
           <p><ext-link ext-link-type="uri">No href link</ext-link></p>
         </sec>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "ext-link" in _rows_groups(result)
 
 
@@ -314,14 +319,14 @@ def test_graphic_sem_href_reporta_issue(tmp_path):
           <p><graphic id="g01"/></p>
         </sec>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "graphic" in _rows_groups(result)
 
 
 def test_abstract_sem_lang_reporta_issue(tmp_path):
     """<abstract> sem xml:lang → issue no grupo abstract."""
     xml = _article(extra_meta="<abstract><p>Resumo sem lang.</p></abstract>")
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "abstract" in _rows_groups(result)
 
 
@@ -354,7 +359,7 @@ def test_regression_1230_validate_secs_nao_levanta_typeerror(tmp_path):
     e o orquestrador lançava TypeError ao iterar.
     """
     xml = _article(body="<sec><p>Texto sem titulo.</p></sec>")
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "sec" in _all_groups(result), (
         "validate_secs retornou None (sem yield from) — regressão do packtools#1230"
     )
@@ -375,7 +380,7 @@ def test_regression_1230_validate_lists_nao_levanta_typeerror(tmp_path):
           </list>
         </sec>"""
     )
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     assert "list" in _all_groups(result), (
         "validate_lists retornou None (sem yield from) — regressão do packtools#1230"
     )
@@ -404,7 +409,7 @@ def test_regression_1230_validate_response_nao_levanta_typeerror(tmp_path):
     # Se TypeError ocorrer dentro de validate_sps_zip ele vira exception com
     # response="exception". A ausência disso — ou a presença de resultados
     # estruturados — confirma que o fix está ativo.
-    result = validate_sps_zip(_make_zip(tmp_path, xml))
+    result = _validate(_make_zip(tmp_path, xml))
     typeerrors = [
         e for e in result["exceptions"]
         if e.get("group") == "response" and "NoneType" in e.get("error", "")

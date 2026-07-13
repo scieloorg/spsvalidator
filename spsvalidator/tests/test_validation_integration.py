@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from spsvalidator.domain.validation import validate_sps_zip
+from spsvalidator.domain.zip_parser import parse_zip_packages
 
 
 @pytest.fixture
@@ -24,6 +25,6 @@ def test_validate_sps_zip_runs_with_packtools(fixture_zip_path):
     with tempfile.TemporaryDirectory() as temp_dir:
         target = Path(temp_dir) / fixture_zip_path.name
         target.write_bytes(fixture_zip_path.read_bytes())
-        result = validate_sps_zip(str(target))
+        result = validate_sps_zip(str(target), parse_zip_packages(str(target)))
     assert result["articles"]
     assert result["articles"][0]["title"]

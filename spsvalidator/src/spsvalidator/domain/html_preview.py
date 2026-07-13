@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import copy
 import os
+import shutil
 import zipfile
 from pathlib import Path, PurePosixPath
-
-from spsvalidator.domain.zip_parser import parse_zip_packages
 
 _XLINK_HREF = "{http://www.w3.org/1999/xlink}href"
 
@@ -53,7 +52,10 @@ def _extract_and_relink_assets(
         if member_name is None:
             return
         assets_dir.mkdir(parents=True, exist_ok=True)
-        (assets_dir / basename).write_bytes(zip_archive.read(member_name))
+        with zip_archive.open(member_name) as source, open(
+            assets_dir / basename, "wb"
+        ) as dest:
+            shutil.copyfileobj(source, dest)
         extracted.add(basename)
 
     asset_name_set = set(asset_names)
@@ -79,9 +81,12 @@ def _write_html_previews(
     from packtools import HTMLGenerator
 
     if asset_names and zip_archive is not None:
-        # Copia a árvore antes de reescrever @xlink:href: xmltree é a mesma
-        # instância usada pela validação SPS; mutar o original contaminaria
-        # o resultado da validação com hrefs que não existem no XML real.
+        # xmltree é o mesmo objeto usado por validate_sps_zip (packages é
+        # parseado uma única vez e compartilhado entre as duas funções, ver
+        # validation_service.run_validation). Mutar em vez de copiar seria
+        # seguro só enquanto generate_html_previews rodar depois de
+        # validate_sps_zip consumir o resultado — em vez de depender dessa
+        # ordem implícita, copiamos antes de reescrever @xlink:href.
         tree_root = copy.deepcopy(xmltree)
         _extract_and_relink_assets(
             tree_root, zip_archive, asset_names, Path(html_dir) / "assets"
@@ -109,22 +114,26 @@ def _write_html_previews(
 
 
 def generate_html_previews(
-    zip_path: str, html_dir: str, asset_urls: dict | None = None
+    zip_path: str,
+    packages: list[tuple[object, set[str]]],
+    html_dir: str,
+    asset_urls: dict | None = None,
 ) -> dict[str, list[str]]:
     """Gera, para cada XML do pacote, a prévia HTML por idioma via
     packtools.HTMLGenerator, extraindo e relinkando os assets (figuras etc.)
     referenciados no XML. Devolve {package: [langs gerados]}."""
     generated_by_package: dict[str, list[str]] = {}
     with zipfile.ZipFile(zip_path) as zip_archive:
-        for pkg in parse_zip_packages(zip_path):
+        for xml_with_pre, files_in_zip in packages:
+            package = PurePosixPath(xml_with_pre.filename).stem
             available_asset_names = [
                 asset["name"]
-                for asset in pkg.xml_with_pre.assets
-                if asset["name"] in pkg.files_in_zip
+                for asset in xml_with_pre.assets
+                if asset["name"] in files_in_zip
             ]
-            generated_by_package[pkg.package] = _write_html_previews(
-                pkg.xmltree,
-                os.path.join(html_dir, pkg.package),
+            generated_by_package[package] = _write_html_previews(
+                xml_with_pre.xmltree,
+                os.path.join(html_dir, package),
                 asset_urls,
                 zip_archive,
                 available_asset_names,

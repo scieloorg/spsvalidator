@@ -8,6 +8,7 @@ from pathlib import Path
 from spsvalidator.db.repository import insert_validation_result
 from spsvalidator.domain.html_preview import generate_html_previews
 from spsvalidator.domain.validation import validate_sps_zip
+from spsvalidator.domain.zip_parser import parse_zip_packages
 
 
 def _sha256_of_file(path: str) -> str:
@@ -40,14 +41,15 @@ def run_validation(
         zip_path = os.path.join(temp_dir, Path(filename).name)
         uploaded_file.save(zip_path)
         package_sha256 = _sha256_of_file(zip_path)
-        result = validate_sps_zip(zip_path)
+        packages = parse_zip_packages(zip_path)
+        result = validate_sps_zip(zip_path, packages)
         rows = result["rows"]
         exceptions = result["exceptions"]
         articles = result["articles"]
         status = _compute_status(rows, exceptions)
         if html_base_dir:
             html_dir = os.path.join(html_base_dir, package_sha256)
-            generate_html_previews(zip_path, html_dir, html_asset_urls)
+            generate_html_previews(zip_path, packages, html_dir, html_asset_urls)
         history_id = insert_validation_result(
             db_path=db_path,
             package_name=Path(filename).name,

@@ -14,6 +14,7 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from packtools import catalogs
 
 from spsvalidator.db.repository import get_validation_details, list_validations
 from spsvalidator.domain.export import build_validation_csv
@@ -145,8 +146,6 @@ def download_csv(history_id: str):
 
 @web_blueprint.get("/html-preview-assets/<path:filename>")
 def html_preview_assets(filename: str):
-    from packtools import catalogs
-
     # `catalogs` substitui a si mesmo em sys.modules por um objeto sem __file__
     # (ver packtools/catalogs/__init__.py); usamos um path já resolvido por ele
     # para descobrir o diretório real dos assets estáticos.

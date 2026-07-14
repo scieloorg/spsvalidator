@@ -137,6 +137,7 @@
               <th>{{ t.warning }}</th>
               <th>{{ t.exceptions }}</th>
               <th>{{ t.download_csv }}</th>
+              <th>{{ t.html_preview }}</th>
             </tr>
           </thead>
           <tbody>
@@ -157,6 +158,17 @@
                   data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
                   data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
                 >{{ t.download_csv }}</a>
+              </td>
+              <td>
+                {% for group in item.html_previews %}
+                {% if item.html_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+                {% for lang in group.langs %}
+                <a
+                  href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
+                  target="_blank"
+                >{{ lang }}</a>
+                {% endfor %}
+                {% endfor %}
               </td>
             </tr>
             {% endfor %}

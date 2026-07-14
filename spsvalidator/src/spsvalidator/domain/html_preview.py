@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import os
-import shutil
+import tempfile
 import zipfile
 from pathlib import PurePosixPath
 
 from lxml import etree
 from packtools.domain import HTMLGenerator
 from packtools.sps.models.article_assets import ArticleAssets
-from packtools.utils import XMLWebOptimiser
+from packtools.utils import SPPackage
 
 
 def generate_html_previews(
@@ -21,19 +21,21 @@ def generate_html_previews(
     URLs de imagem: as imagens do artigo ficam em caminho relativo
     ``assets/...``, resolvido a partir da própria página de prévia.
 
-    Imagens tif/sem-extensão são otimizadas via packtools.utils.XMLWebOptimiser
+    Imagens tif/sem-extensão são otimizadas via packtools.utils.SPPackage
     (mesma classe usada pela pipeline real de publicação do SciELO), que gera
     as variantes .png (ampliação) e .thumbnail.jpg (miniatura) a partir do
-    conteúdo real da imagem — sem depender de já existir um arquivo de mesmo
-    nome-base no pacote.
+    conteúdo real da imagem, e grava os arquivos otimizados direto em
+    ``assets_dir``.
     """
     package = PurePosixPath(xml_with_pre.filename).stem
     article_dir = os.path.join(html_dir, package)
     assets_dir = os.path.join(article_dir, "assets")
     os.makedirs(assets_dir, exist_ok=True)
 
-    with zipfile.ZipFile(xml_with_pre.zip_file_path) as zip_archive:
-        optimised_root = _optimise_and_write_assets(xml_with_pre, zip_archive, assets_dir)
+    with tempfile.TemporaryDirectory() as work_dir:
+        flat_zip_path = os.path.join(work_dir, "flat.zip")
+        _flatten_zip(xml_with_pre.zip_file_path, flat_zip_path)
+        optimised_root = _optimise_package(flat_zip_path, work_dir, assets_dir)
 
     generator = HTMLGenerator(
         etree.ElementTree(optimised_root), **(html_asset_urls or {})
@@ -55,59 +57,56 @@ def generate_html_previews(
     return generated_langs
 
 
-def _optimise_and_write_assets(xml_with_pre, zip_archive, assets_dir: str):
-    member_by_basename = {
-        os.path.basename(name): name
-        for name in zip_archive.namelist()
-        if not name.endswith("/")
-    }
-    image_filenames = [
-        name for name in member_by_basename
-        if os.path.splitext(name)[-1].lower() != ".pdf"
-    ]
+def _flatten_zip(source_zip_path: str, dest_zip_path: str) -> None:
+    """Copia ``source_zip_path`` para ``dest_zip_path`` sem subpasta interna.
 
-    def read_file(filename):
-        member = member_by_basename[os.path.basename(filename)]
-        return zip_archive.read(member)
+    A especificação de pacote de entrega não exige nenhuma estrutura de
+    subpasta, e pacotes reais aparecem das duas formas (com e sem). O
+    packtools.utils.SPPackage monta a lista de imagens a otimizar direto do
+    namelist do zip de entrada: se houver subpasta, o xlink:href (sempre
+    nome-base) nunca bate com esse caminho completo, e a otimização falha
+    silenciosamente. Achatar antes elimina essa causa.
+    """
+    with zipfile.ZipFile(source_zip_path) as source, zipfile.ZipFile(
+        dest_zip_path, "w", compression=zipfile.ZIP_DEFLATED
+    ) as dest:
+        for name in source.namelist():
+            if name.endswith("/"):
+                continue
+            dest.writestr(os.path.basename(name), source.read(name))
 
-    optimiser = XMLWebOptimiser(
-        filename=xml_with_pre.filename,
-        image_filenames=image_filenames,
-        read_file=read_file,
-        work_dir=assets_dir,
-        stop_if_error=False,
+
+def _optimise_package(flat_zip_path: str, work_dir: str, assets_dir: str):
+    with zipfile.ZipFile(flat_zip_path) as flat_zip:
+        xml_members = [n for n in flat_zip.namelist() if n.endswith(".xml")]
+    if len(xml_members) != 1:
+        raise ValueError(
+            f"Pacote deve conter exatamente 1 XML, encontrados {len(xml_members)}"
+        )
+
+    optimised_zip_path = os.path.join(work_dir, "optimised.zip")
+    package = SPPackage.from_file(
+        flat_zip_path, extracted_package=assets_dir, stop_if_error=False
     )
-    optimised_root = etree.fromstring(optimiser.get_xml_file())
+    package.optimise(new_package_file_path=optimised_zip_path, preserve_files=True)
 
-    from_to = {}
-    for filename, content in optimiser.get_optimised_assets():
-        if content is None:
-            continue
-        _write_bytes(assets_dir, filename, content)
-        from_to[filename] = f"assets/{filename}"
-    for filename, content in optimiser.get_assets_thumbnails():
-        if content is None:
-            continue
-        _write_bytes(assets_dir, filename, content)
-        from_to[filename] = f"assets/{filename}"
+    with zipfile.ZipFile(optimised_zip_path) as optimised_zip:
+        names = optimised_zip.namelist()
+        xml_name = next(n for n in names if n.endswith(".xml"))
+        optimised_root = etree.fromstring(optimised_zip.read(xml_name))
+        asset_names = [
+            n for n in names if n != xml_name and not n.lower().endswith(".pdf")
+        ]
+        served_names = {n for n in names if n == xml_name or n.lower().endswith(".pdf")}
 
-    for asset in ArticleAssets(optimised_root).article_assets:
-        name = asset.name
-        if name in from_to:
-            continue
-        member = member_by_basename.get(os.path.basename(name))
-        if member is None:
-            continue
-        with zip_archive.open(member) as source, open(
-            os.path.join(assets_dir, os.path.basename(name)), "wb"
-        ) as dest:
-            shutil.copyfileobj(source, dest)
-        from_to[name] = f"assets/{name}"
-
+    from_to = {name: f"assets/{name}" for name in asset_names}
     ArticleAssets(optimised_root).replace_names(from_to)
+
+    # extractall (preserve_files=True) grava também o XML e o PDF de rendition
+    # em assets_dir; nenhum dos dois é servido pela prévia HTML.
+    for name in served_names:
+        extracted_path = os.path.join(assets_dir, name)
+        if os.path.isfile(extracted_path):
+            os.remove(extracted_path)
+
     return optimised_root
-
-
-def _write_bytes(assets_dir: str, filename: str, content: bytes) -> None:
-    with open(os.path.join(assets_dir, filename), "wb") as fp:
-        fp.write(content)

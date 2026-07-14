@@ -19,6 +19,12 @@ def _json_safe(value):
 def init_db(db_path: str) -> None:
     with sqlite3.connect(db_path) as connection:
         connection.execute("""
+            CREATE TABLE IF NOT EXISTS application_setting (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+            """)
+        connection.execute("""
             CREATE TABLE IF NOT EXISTS package_validation_history (
                 id TEXT PRIMARY KEY,
                 validated_at TEXT NOT NULL,
@@ -56,6 +62,30 @@ def init_db(db_path: str) -> None:
                 FOREIGN KEY(history_id) REFERENCES package_validation_history(id)
             )
             """)
+        connection.commit()
+
+
+def get_setting(db_path, key):
+    with sqlite3.connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT value FROM application_setting WHERE key = ?",
+            (key,),
+        ).fetchone()
+
+    return row[0] if row else None
+
+
+def set_setting(db_path, key, value):
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO application_setting (key, value)
+            VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (key, value),
+        )
+
         connection.commit()
 
 

@@ -62,11 +62,31 @@ def _html_previews_by_article(package_sha256: str) -> list[dict]:
     return groups
 
 
+def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
+    """PDFs extraídos para um pacote, agrupados por artigo (xml_stem).
+
+    Um pacote SPS válido tem 1 XML, mas o agrupamento evita ambiguidade caso um
+    pacote atípico contenha mais de um.
+    """
+    base_dir = Path(current_app.config["HTML_PREVIEWS_DIR"]) / package_sha256
+    if not base_dir.is_dir():
+        return []
+    groups = []
+    for article_dir in sorted(base_dir.iterdir()):
+        if not article_dir.is_dir():
+            continue
+        pdf_names = sorted(p.name for p in (article_dir / "assets").glob("*.pdf"))
+        if pdf_names:
+            groups.append({"xml_stem": article_dir.name, "pdf_names": pdf_names})
+    return groups
+
+
 def _render_index(**context):
     context.setdefault("error_message", None)
     history_items = list_validations(current_app.config["DB_PATH"])
     for item in history_items:
         item["html_previews"] = _html_previews_by_article(item["package_sha256"])
+        item["pdf_previews"] = _pdf_previews_by_article(item["package_sha256"])
     return render_template(
         "index.html",
         history_items=history_items,

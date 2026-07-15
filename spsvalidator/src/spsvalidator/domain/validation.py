@@ -4,18 +4,15 @@ import os
 from pathlib import PurePosixPath
 
 from lxml import etree
+from packtools.sps.models.article_license import ArticleLicense
+from packtools.sps.pid_provider.models.journal_meta import JournalID, Publisher, Title
+from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
+from packtools.sps.validation.xml_validator import get_validation_results
 
 from spsvalidator.domain.metadata import extract_article_snapshot
 
 
 def _extract_journal_data(xmltree):
-    from packtools.sps.models.article_license import ArticleLicense
-    from packtools.sps.pid_provider.models.journal_meta import (
-        JournalID,
-        Publisher,
-        Title,
-    )
-
     try:
         license_code = None
         for license_item in ArticleLicense(xmltree).licenses:
@@ -40,8 +37,6 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
     em vez de um caminho de zip, para permitir que quem já tenha parseado o
     pacote (ex.: para também gerar a prévia HTML) não precise reabri-lo.
     """
-    from packtools.sps.validation.xml_validator import get_validation_results
-
     package = PurePosixPath(xml_with_pre.filename).stem
     files_in_zip = set(xml_with_pre.filenames or [])
 
@@ -102,8 +97,6 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
 
 
 def validate_sps_zip(zip_path: str) -> dict:
-    from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
-
     if not os.path.isfile(zip_path):
         raise FileNotFoundError(zip_path)
 

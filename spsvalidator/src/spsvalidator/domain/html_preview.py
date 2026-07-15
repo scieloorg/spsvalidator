@@ -77,13 +77,6 @@ def _flatten_zip(source_zip_path: str, dest_zip_path: str) -> None:
 
 
 def _optimise_package(flat_zip_path: str, work_dir: str, assets_dir: str):
-    with zipfile.ZipFile(flat_zip_path) as flat_zip:
-        xml_members = [n for n in flat_zip.namelist() if n.endswith(".xml")]
-    if len(xml_members) != 1:
-        raise ValueError(
-            f"Pacote deve conter exatamente 1 XML, encontrados {len(xml_members)}"
-        )
-
     optimised_zip_path = os.path.join(work_dir, "optimised.zip")
     package = SPPackage.from_file(
         flat_zip_path, extracted_package=assets_dir, stop_if_error=False
@@ -92,21 +85,13 @@ def _optimise_package(flat_zip_path: str, work_dir: str, assets_dir: str):
 
     with zipfile.ZipFile(optimised_zip_path) as optimised_zip:
         names = optimised_zip.namelist()
-        xml_name = next(n for n in names if n.endswith(".xml"))
+        from_to = {}
+        xml_name = None
+        for name in names:
+            if name.endswith(".xml"):
+                xml_name = name
+            from_to[name] = f"assets/{name}"
         optimised_root = etree.fromstring(optimised_zip.read(xml_name))
-        asset_names = [
-            n for n in names if n != xml_name and not n.lower().endswith(".pdf")
-        ]
-        served_names = {n for n in names if n == xml_name or n.lower().endswith(".pdf")}
 
-    from_to = {name: f"assets/{name}" for name in asset_names}
     ArticleAssets(optimised_root).replace_names(from_to)
-
-    # extractall (preserve_files=True) grava também o XML e o PDF de rendition
-    # em assets_dir; nenhum dos dois é servido pela prévia HTML.
-    for name in served_names:
-        extracted_path = os.path.join(assets_dir, name)
-        if os.path.isfile(extracted_path):
-            os.remove(extracted_path)
-
     return optimised_root

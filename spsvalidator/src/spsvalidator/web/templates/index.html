@@ -107,6 +107,8 @@
               <th>{{ _("WARNING") }}</th>
               <th>{{ _("Exceptions") }}</th>
               <th>{{ _("Relatório") }}</th>
+              <th>{{ _("HTML") }}</th>
+              <th>{{ _("PDF") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -127,6 +129,28 @@
                   data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
                   data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
                 >{{ _("Relatório") }}</a>
+              </td>
+              <td>
+                {% for group in item.html_previews %}
+                {% if item.html_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+                {% for lang in group.langs %}
+                <a
+                  href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
+                  target="_blank"
+                >{{ lang }}</a>
+                {% endfor %}
+                {% endfor %}
+              </td>
+              <td>
+                {% for group in item.pdf_previews %}
+                {% if item.pdf_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+                {% for pdf_name in group.pdf_names %}
+                <a
+                  href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf_name) }}"
+                  target="_blank"
+                >{{ pdf_name }}</a>
+                {% endfor %}
+                {% endfor %}
               </td>
             </tr>
             {% endfor %}

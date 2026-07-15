@@ -31,6 +31,7 @@ def create_app(
     db_path = target_dir / "spsvalidator.sqlite3"
     init_db(str(db_path))
     app.config["DB_PATH"] = str(db_path)
+    app.config["HTML_PREVIEWS_DIR"] = str(target_dir / "html_previews")
     app.config["APP_DISPLAY_NAME"] = APP_DISPLAY_NAME
     app.config["BABEL_DEFAULT_LOCALE"] = "pt"
     app.config["EXECUTION_MODE"] = execution_mode

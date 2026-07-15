@@ -14,14 +14,18 @@ def test_save_validation_csv_writes_file(monkeypatch, tmp_path):
         lambda path: None,
     )
 
-    def fake_validate(zip_path: str):
+    def fake_validate(xml_with_pre):
         return {
             "rows": [{"group": "g", "title": "t", "response": "ERROR"}],
             "exceptions": [],
-            "articles": [],
+            "article": {},
         }
 
-    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+    monkeypatch.setattr(validation_service, "validate_sps_xml_with_pre", fake_validate)
+    monkeypatch.setattr(
+        "packtools.sps.pid_provider.xml_sps_lib.XMLWithPre.create",
+        classmethod(lambda cls, path=None, **kwargs: iter([object()])),
+    )
 
     class UploadedFile:
         filename = "package.zip"

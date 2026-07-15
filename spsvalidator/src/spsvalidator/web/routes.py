@@ -14,6 +14,7 @@ from flask import (
     url_for,
 )
 from flask_babel import gettext
+from packtools import catalogs
 
 from spsvalidator.db.repository import get_validation_details, list_validations
 from spsvalidator.domain.export import build_validation_csv
@@ -28,11 +29,67 @@ web_blueprint = Blueprint(
 )
 
 
+def _html_preview_asset_urls() -> dict:
+    return {
+        "css": url_for(
+            "web.html_preview_assets", filename="scielo-article-standalone.css"
+        ),
+        "print_css": url_for(
+            "web.html_preview_assets", filename="scielo-bundle-print.css"
+        ),
+        "js": url_for(
+            "web.html_preview_assets", filename="scielo-article-standalone-min.js"
+        ),
+    }
+
+
+def _html_previews_by_article(package_sha256: str) -> list[dict]:
+    """Idiomas com HTML gerado para um pacote, agrupados por artigo (xml_stem).
+
+    Um pacote SPS válido tem 1 XML, mas o agrupamento evita ambiguidade caso um
+    pacote atípico contenha mais de um.
+    """
+    base_dir = Path(current_app.config["HTML_PREVIEWS_DIR"]) / package_sha256
+    if not base_dir.is_dir():
+        return []
+    groups = []
+    for article_dir in sorted(base_dir.iterdir()):
+        if not article_dir.is_dir():
+            continue
+        langs = sorted(p.stem for p in article_dir.glob("*.html"))
+        if langs:
+            groups.append({"xml_stem": article_dir.name, "langs": langs})
+    return groups
+
+
+def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
+    """PDFs extraídos para um pacote, agrupados por artigo (xml_stem).
+
+    Um pacote SPS válido tem 1 XML, mas o agrupamento evita ambiguidade caso um
+    pacote atípico contenha mais de um.
+    """
+    base_dir = Path(current_app.config["HTML_PREVIEWS_DIR"]) / package_sha256
+    if not base_dir.is_dir():
+        return []
+    groups = []
+    for article_dir in sorted(base_dir.iterdir()):
+        if not article_dir.is_dir():
+            continue
+        pdf_names = sorted(p.name for p in (article_dir / "assets").glob("*.pdf"))
+        if pdf_names:
+            groups.append({"xml_stem": article_dir.name, "pdf_names": pdf_names})
+    return groups
+
+
 def _render_index(**context):
     context.setdefault("error_message", None)
+    history_items = list_validations(current_app.config["DB_PATH"])
+    for item in history_items:
+        item["html_previews"] = _html_previews_by_article(item["package_sha256"])
+        item["pdf_previews"] = _pdf_previews_by_article(item["package_sha256"])
     return render_template(
         "index.html",
-        history_items=list_validations(current_app.config["DB_PATH"]),
+        history_items=history_items,
         **context,
     )
 
@@ -63,6 +120,8 @@ def validate():
             current_app.config["DB_PATH"],
             uploaded_file,
             zip_only_message=gettext("Apenas arquivos .zip SPS são suportados."),
+            html_base_dir=current_app.config["HTML_PREVIEWS_DIR"],
+            html_asset_urls=_html_preview_asset_urls(),
         )
     except Exception as exc:
         return _render_index(latest_result=None, error_message=str(exc))
@@ -84,6 +143,42 @@ def download_csv(history_id: str):
     )
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@web_blueprint.get("/html-preview-assets/<path:filename>")
+def html_preview_assets(filename: str):
+    # `catalogs` substitui a si mesmo em sys.modules por um objeto sem __file__
+    # (ver packtools/catalogs/__init__.py); usamos um path já resolvido por ele
+    # para descobrir o diretório real dos assets estáticos.
+    static_dir = Path(catalogs.HTML_GEN_DEFAULT_CSS_PATH).resolve().parent
+    return send_from_directory(static_dir, filename)
+
+
+@web_blueprint.get("/validation/<history_id>/html/<xml_stem>/<lang>")
+def view_html_preview(history_id: str, xml_stem: str, lang: str):
+    details = get_validation_details(current_app.config["DB_PATH"], history_id)
+    if details is None:
+        abort(404)
+    preview_dir = (
+        Path(current_app.config["HTML_PREVIEWS_DIR"])
+        / details["package_sha256"]
+        / xml_stem
+    )
+    return send_from_directory(preview_dir, f"{lang}.html")
+
+
+@web_blueprint.get("/validation/<history_id>/html/<xml_stem>/assets/<path:filename>")
+def html_preview_asset(history_id: str, xml_stem: str, filename: str):
+    details = get_validation_details(current_app.config["DB_PATH"], history_id)
+    if details is None:
+        abort(404)
+    assets_dir = (
+        Path(current_app.config["HTML_PREVIEWS_DIR"])
+        / details["package_sha256"]
+        / xml_stem
+        / "assets"
+    )
+    return send_from_directory(assets_dir, filename)
 
 
 @web_blueprint.get("/favicon.ico")

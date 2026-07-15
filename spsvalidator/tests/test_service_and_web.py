@@ -23,24 +23,22 @@ def test_run_validation_persists_result(monkeypatch, tmp_path):
     app = create_app(str(tmp_path))
     db_path = app.config["DB_PATH"]
 
-    def fake_validate(zip_path: str):
+    def fake_validate(xml_with_pre):
         return {
             "rows": [{"group": "g", "title": "t", "response": "ERROR"}],
             "exceptions": [],
-            "articles": [
-                {
-                    "xml_path": "dias_2023.xml",
-                    "title": "Article",
-                    "authors_text": "A B",
-                    "doi": "10.1/2",
-                    "pid": "abc",
-                    "article_status": "issue",
-                    "issue_count": 1,
-                }
-            ],
+            "article": {
+                "xml_path": "dias_2023.xml",
+                "title": "Article",
+                "authors_text": "A B",
+                "doi": "10.1/2",
+                "pid": "abc",
+                "article_status": "issue",
+                "issue_count": 1,
+            },
         }
 
-    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+    monkeypatch.setattr(validation_service, "validate_sps_xml_with_pre", fake_validate)
     payload = _zip_fixture_xml()
 
     class UploadedFile:
@@ -67,7 +65,7 @@ def test_run_validation_persists_bytes_in_report(monkeypatch, tmp_path):
     app = create_app(str(tmp_path))
     db_path = app.config["DB_PATH"]
 
-    def fake_validate(zip_path: str):
+    def fake_validate(xml_with_pre):
         return {
             "rows": [
                 {
@@ -79,20 +77,22 @@ def test_run_validation_persists_bytes_in_report(monkeypatch, tmp_path):
                 }
             ],
             "exceptions": [{"response": "exception", "detail": b"fail"}],
-            "articles": [
-                {
-                    "xml_path": "article.xml",
-                    "title": "Article",
-                    "authors_text": "A B",
-                    "doi": "",
-                    "pid": "",
-                    "article_status": "issue",
-                    "issue_count": 1,
-                }
-            ],
+            "article": {
+                "xml_path": "article.xml",
+                "title": "Article",
+                "authors_text": "A B",
+                "doi": "",
+                "pid": "",
+                "article_status": "issue",
+                "issue_count": 1,
+            },
         }
 
-    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+    monkeypatch.setattr(validation_service, "validate_sps_xml_with_pre", fake_validate)
+    monkeypatch.setattr(
+        "packtools.sps.pid_provider.xml_sps_lib.XMLWithPre.create",
+        classmethod(lambda cls, path=None, **kwargs: iter([object()])),
+    )
 
     class UploadedFile:
         filename = "package.zip"
@@ -111,10 +111,10 @@ def test_run_validation_persists_bytes_in_report(monkeypatch, tmp_path):
 def test_validate_route_shows_error_on_failure(monkeypatch, tmp_path):
     app = create_app(str(tmp_path))
 
-    def fake_validate(zip_path: str):
+    def fake_validate(xml_with_pre):
         raise RuntimeError("validation failed")
 
-    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+    monkeypatch.setattr(validation_service, "validate_sps_xml_with_pre", fake_validate)
     client = app.test_client()
     response = client.post(
         "/validate",
@@ -216,24 +216,22 @@ def test_validate_route_processes_upload(monkeypatch, tmp_path):
     app = create_app(str(tmp_path))
     app.testing = True
 
-    def fake_validate(zip_path: str):
+    def fake_validate(xml_with_pre):
         return {
             "rows": [],
             "exceptions": [],
-            "articles": [
-                {
-                    "xml_path": "dias_2023.xml",
-                    "title": "T",
-                    "authors_text": "Author",
-                    "doi": "",
-                    "pid": "",
-                    "article_status": "ok",
-                    "issue_count": 0,
-                }
-            ],
+            "article": {
+                "xml_path": "dias_2023.xml",
+                "title": "T",
+                "authors_text": "Author",
+                "doi": "",
+                "pid": "",
+                "article_status": "ok",
+                "issue_count": 0,
+            },
         }
 
-    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+    monkeypatch.setattr(validation_service, "validate_sps_xml_with_pre", fake_validate)
     client = app.test_client()
     response = client.post(
         "/validate",

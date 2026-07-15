@@ -128,8 +128,9 @@ def list_validations(db_path: str) -> list[dict]:
     with sqlite3.connect(db_path) as connection:
         connection.row_factory = sqlite3.Row
         rows = connection.execute("""
-            SELECT id, validated_at, package_name, xml_count, issues_count,
-                   exceptions_count, critical_count, error_count, warning_count
+            SELECT id, validated_at, package_name, package_sha256, xml_count,
+                   issues_count, exceptions_count, critical_count, error_count,
+                   warning_count
             FROM package_validation_history
             ORDER BY datetime(validated_at) DESC
             """).fetchall()

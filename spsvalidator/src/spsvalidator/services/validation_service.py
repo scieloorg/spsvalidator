@@ -5,6 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
+from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
+
 from spsvalidator.db.repository import insert_validation_result
 from spsvalidator.domain.html_preview import generate_html_previews
 from spsvalidator.domain.validation import validate_sps_xml_with_pre
@@ -33,8 +35,6 @@ def run_validation(
     html_base_dir: str | None = None,
     html_asset_urls: dict | None = None,
 ) -> dict:
-    from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
-
     filename = uploaded_file.filename or ""
     if not filename.lower().endswith(".zip"):
         raise ValueError(zip_only_message or "Only SPS .zip files are supported.")

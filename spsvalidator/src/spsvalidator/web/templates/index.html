@@ -95,70 +95,36 @@
 
       <section class="panel">
         <h2>{{ _("Pacotes validados") }}</h2>
-        {% if history_items %}
-        <table>
-          <thead>
-            <tr>
-              <th>{{ _("Data") }}</th>
-              <th>{{ _("Pacote") }}</th>
-              <th>{{ _("XMLs") }}</th>
-              <th>{{ _("CRITICAL") }}</th>
-              <th>{{ _("ERROR") }}</th>
-              <th>{{ _("WARNING") }}</th>
-              <th>{{ _("Exceptions") }}</th>
-              <th>{{ _("Relatório") }}</th>
-              <th>{{ _("HTML") }}</th>
-              <th>{{ _("PDF") }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in history_items %}
-            <tr>
-              <td><a href="/?history_id={{ item.id }}">{{ item.validated_at }}</a></td>
-              <td>{{ item.package_name }}</td>
-              <td>{{ item.xml_count }}</td>
-              <td>{{ item.critical_count }}</td>
-              <td>{{ item.error_count }}</td>
-              <td>{{ item.warning_count }}</td>
-              <td>{{ item.exceptions_count }}</td>
-              <td>
-                <a
-                  href="#"
-                  class="csv-download"
-                  data-history-id="{{ item.id }}"
-                  data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
-                  data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
-                >{{ _("Relatório") }}</a>
-              </td>
-              <td>
-                {% for group in item.html_previews %}
-                {% if item.html_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
-                {% for lang in group.langs %}
-                <a
-                  href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
-                  target="_blank"
-                >{{ lang }}</a>
-                {% endfor %}
-                {% endfor %}
-              </td>
-              <td>
-                {% for group in item.pdf_previews %}
-                {% if item.pdf_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
-                {% for pdf_name in group.pdf_names %}
-                <a
-                  href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf_name) }}"
-                  target="_blank"
-                >{{ pdf_name }}</a>
-                {% endfor %}
-                {% endfor %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-        <p class="muted">{{ _("Nenhum pacote validado ainda.") }}</p>
-        {% endif %}
+        <form method="get" action="/" class="search-form" id="history-filters">
+          <input
+            type="text"
+            name="q"
+            value="{{ name_query }}"
+            placeholder="{{ _('Buscar pelo nome do pacote') }}"
+          >
+          <select name="status">
+            <option value="" {% if not status_query %}selected{% endif %}>{{ _("Todos") }}</option>
+            <option value="valid" {% if status_query == "valid" %}selected{% endif %}>{{ _("Válido") }}</option>
+            <option value="invalid" {% if status_query == "invalid" %}selected{% endif %}>{{ _("Inválido") }}</option>
+            <option value="error" {% if status_query == "error" %}selected{% endif %}>{{ _("Erro") }}</option>
+          </select>
+          <label for="page-size">{{ _("Itens por página") }}</label>
+          <input
+            type="number"
+            name="page_size"
+            id="page-size"
+            min="1"
+            max="100"
+            value="{{ page_size }}"
+          >
+          <button type="submit">{{ _("Buscar") }}</button>
+          {% if name_query or status_query %}
+          <a href="/">{{ _("Limpar") }}</a>
+          {% endif %}
+        </form>
+        <div id="history-list">
+          {% include "_history_list.html" %}
+        </div>
         <p id="download-feedback" class="download-feedback" hidden></p>
       </section>
 
@@ -272,6 +238,78 @@
 
       bindCsvDownloads();
       window.addEventListener("pywebviewready", bindCsvDownloads);
+
+      function bindLiveHistoryFilters() {
+        var form = document.getElementById("history-filters");
+        var resultsContainer = document.getElementById("history-list");
+        if (!form || !resultsContainer) {
+          return;
+        }
+        var searchInput = form.querySelector("input[name='q']");
+        var statusSelect = form.querySelector("select[name='status']");
+        var pageSizeInput = form.querySelector("input[name='page_size']");
+        var debounceTimer = null;
+        var currentPage = 1;
+
+        function applyFilters(targetPage) {
+          currentPage = targetPage || 1;
+          var pageSize = Math.min(100, Math.max(1, parseInt(pageSizeInput.value, 10) || 25));
+          var params = new URLSearchParams();
+          if (searchInput.value.trim()) {
+            params.set("q", searchInput.value.trim());
+          }
+          if (statusSelect.value) {
+            params.set("status", statusSelect.value);
+          }
+          params.set("page_size", pageSize);
+          params.set("page", currentPage);
+          var queryString = params.toString();
+          fetch("/history-list?" + queryString)
+            .then(function (response) {
+              return response.text();
+            })
+            .then(function (html) {
+              resultsContainer.innerHTML = html;
+              window.history.replaceState(null, "", "/?" + queryString);
+            });
+        }
+
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+          clearTimeout(debounceTimer);
+          applyFilters(1);
+        });
+
+        searchInput.addEventListener("input", function () {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(function () {
+            applyFilters(1);
+          }, 350);
+        });
+
+        statusSelect.addEventListener("change", function () {
+          clearTimeout(debounceTimer);
+          applyFilters(1);
+        });
+
+        pageSizeInput.addEventListener("input", function () {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(function () {
+            applyFilters(1);
+          }, 350);
+        });
+
+        resultsContainer.addEventListener("click", function (event) {
+          var link = event.target.closest(".page-link");
+          if (!link) {
+            return;
+          }
+          event.preventDefault();
+          applyFilters(parseInt(link.dataset.page, 10));
+        });
+      }
+
+      bindLiveHistoryFilters();
     </script>
   </body>
 </html>

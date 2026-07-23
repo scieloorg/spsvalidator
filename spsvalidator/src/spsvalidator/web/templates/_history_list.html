@@ -1,0 +1,93 @@
+{% if history_items %}
+{% set status_labels = {"valid": _("Válido"), "invalid": _("Inválido"), "error": _("Erro")} %}
+<table>
+  <thead>
+    <tr>
+      <th>{{ _("Data") }}</th>
+      <th>{{ _("Pacote") }}</th>
+      <th>{{ _("Status") }}</th>
+      <th>{{ _("XMLs") }}</th>
+      <th>{{ _("CRITICAL") }}</th>
+      <th>{{ _("ERROR") }}</th>
+      <th>{{ _("WARNING") }}</th>
+      <th>{{ _("Exceptions") }}</th>
+      <th>{{ _("Validação") }}</th>
+      <th>{{ _("HTML") }}</th>
+      <th>{{ _("PDF") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in history_items %}
+    <tr>
+      <td><a href="/?history_id={{ item.id }}">{{ item.validated_at }}</a></td>
+      <td>{{ item.package_name }}</td>
+      <td class="status-{{ item.status }}">{{ status_labels.get(item.status, item.status) }}</td>
+      <td>{{ item.xml_count }}</td>
+      <td>{{ item.critical_count }}</td>
+      <td>{{ item.error_count }}</td>
+      <td>{{ item.warning_count }}</td>
+      <td>{{ item.exceptions_count }}</td>
+      <td>
+        <a
+          href="#"
+          class="csv-download"
+          data-history-id="{{ item.id }}"
+          data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
+          data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
+          aria-label="{{ _('Baixar relatório de %(name)s', name=item.package_name) }}"
+        >{{ _("Relatório") }}</a>
+      </td>
+      <td>
+        {% for group in item.html_previews %}
+        {% if item.html_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+        {% for lang in group.langs %}
+        <a
+          href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
+          target="_blank"
+        >{{ lang }}</a>
+        {% endfor %}
+        {% endfor %}
+      </td>
+      <td>
+        {% for group in item.pdf_previews %}
+        {% if item.pdf_previews|length > 1 %}<div class="muted">{{ group.xml_stem }}:</div>{% endif %}
+        {% for pdf_name in group.pdf_names %}
+        <div>
+          <a
+            href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf_name) }}"
+            target="_blank"
+          >{{ pdf_name }}</a>
+        </div>
+        {% endfor %}
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{% if request.args.get("q") or request.args.get("status") %}
+<p class="muted">{{ _("Nenhum pacote encontrado com esse filtro.") }}</p>
+{% else %}
+<p class="muted">{{ _("Nenhum pacote validado ainda.") }}</p>
+{% endif %}
+{% endif %}
+{% if total > 0 %}
+<p class="pagination muted">
+  {{ _("Página %(page)s de %(total_pages)s (%(total)s pacotes)", page=page, total_pages=total_pages, total=total) }}
+  {% if page > 1 %}
+  <a
+    href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=page - 1) }}"
+    class="page-link"
+    data-page="{{ page - 1 }}"
+  >{{ _("Anterior") }}</a>
+  {% endif %}
+  {% if page < total_pages %}
+  <a
+    href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=page + 1) }}"
+    class="page-link"
+    data-page="{{ page + 1 }}"
+  >{{ _("Próxima") }}</a>
+  {% endif %}
+</p>
+{% endif %}

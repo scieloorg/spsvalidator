@@ -16,7 +16,11 @@ from flask import (
 from flask_babel import gettext
 from packtools import catalogs
 
-from spsvalidator.db.repository import get_validation_details, list_validations
+from spsvalidator.db.repository import (
+    count_validations,
+    get_validation_details,
+    list_validations,
+)
 from spsvalidator.domain.export import build_validation_csv
 from spsvalidator.services.validation_service import run_validation
 
@@ -27,6 +31,9 @@ web_blueprint = Blueprint(
     static_folder="static",
     static_url_path="/static",
 )
+
+DEFAULT_PAGE_SIZE = 25
+MAX_PAGE_SIZE = 100
 
 
 def _html_preview_asset_urls() -> dict:
@@ -81,17 +88,55 @@ def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
     return groups
 
 
-def _render_index(**context):
-    context.setdefault("error_message", None)
-    history_items = list_validations(current_app.config["DB_PATH"])
+def _parse_int(value, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _paginated_history() -> dict:
+    db_path = current_app.config["DB_PATH"]
+    name_query = request.args.get("q", "").strip()
+    status_query = request.args.get("status", "").strip()
+    page_size = _parse_int(request.args.get("page_size"), DEFAULT_PAGE_SIZE)
+    page_size = min(MAX_PAGE_SIZE, max(1, page_size))
+    page = max(1, _parse_int(request.args.get("page"), 1))
+
+    total = count_validations(db_path, name_query, status_query)
+    total_pages = max(1, -(-total // page_size))  # ceil division
+    page = min(page, total_pages)
+
+    history_items = list_validations(
+        db_path,
+        name_query,
+        status_query,
+        limit=page_size,
+        offset=(page - 1) * page_size,
+    )
     for item in history_items:
         item["html_previews"] = _html_previews_by_article(item["package_sha256"])
         item["pdf_previews"] = _pdf_previews_by_article(item["package_sha256"])
-    return render_template(
-        "index.html",
-        history_items=history_items,
-        **context,
-    )
+
+    return {
+        "history_items": history_items,
+        "name_query": name_query,
+        "status_query": status_query,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+    }
+
+
+def _render_index(**context):
+    context.setdefault("error_message", None)
+    return render_template("index.html", **_paginated_history(), **context)
+
+
+@web_blueprint.get("/history-list")
+def history_list():
+    return render_template("_history_list.html", **_paginated_history())
 
 
 @web_blueprint.get("/")

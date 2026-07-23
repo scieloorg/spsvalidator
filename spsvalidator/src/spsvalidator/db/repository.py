@@ -124,17 +124,55 @@ def insert_validation_result(
     return history_id
 
 
-def list_validations(db_path: str) -> list[dict]:
+def _validations_filter_clause(
+    name_query: str | None, status: str | None
+) -> tuple[str, list]:
+    conditions = []
+    params: list = []
+    if name_query:
+        conditions.append("LOWER(package_name) LIKE LOWER(?)")
+        params.append(f"%{name_query}%")
+    if status:
+        conditions.append("status = ?")
+        params.append(status)
+    where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+    return where_clause, params
+
+
+def list_validations(
+    db_path: str,
+    name_query: str | None = None,
+    status: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    where_clause, params = _validations_filter_clause(name_query, status)
+    sql = f"""
+        SELECT id, validated_at, package_name, package_sha256, xml_count,
+               issues_count, exceptions_count, critical_count, error_count,
+               warning_count, status
+        FROM package_validation_history
+        {where_clause}
+        ORDER BY datetime(validated_at) DESC
+        """
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        params = params + [limit, offset]
+
     with sqlite3.connect(db_path) as connection:
         connection.row_factory = sqlite3.Row
-        rows = connection.execute("""
-            SELECT id, validated_at, package_name, package_sha256, xml_count,
-                   issues_count, exceptions_count, critical_count, error_count,
-                   warning_count
-            FROM package_validation_history
-            ORDER BY datetime(validated_at) DESC
-            """).fetchall()
+        rows = connection.execute(sql, params).fetchall()
     return [dict(row) for row in rows]
+
+
+def count_validations(
+    db_path: str, name_query: str | None = None, status: str | None = None
+) -> int:
+    where_clause, params = _validations_filter_clause(name_query, status)
+    sql = f"SELECT COUNT(*) FROM package_validation_history {where_clause}"
+    with sqlite3.connect(db_path) as connection:
+        total = connection.execute(sql, params).fetchone()[0]
+    return int(total)
 
 
 def get_validation_details(db_path: str, history_id: str) -> dict | None:

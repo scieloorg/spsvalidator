@@ -39,4 +39,4 @@ def test_save_validation_csv_writes_file(monkeypatch, tmp_path):
     target = tmp_path / "Downloads" / "package.validation.csv"
     assert response["ok"] is True
     assert target.is_file()
-    assert "group,title" in target.read_text(encoding="utf-8")
+    assert "package,status,subject,message,advise" in target.read_text(encoding="utf-8")

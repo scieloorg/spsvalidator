@@ -11,7 +11,8 @@
       <th>{{ _("ERROR") }}</th>
       <th>{{ _("WARNING") }}</th>
       <th>{{ _("Exceptions") }}</th>
-      <th>{{ _("Validação") }}</th>
+      <th>{{ _("Relatório") }}</th>
+      <th>{{ _("CSV") }}</th>
       <th>{{ _("HTML") }}</th>
       <th>{{ _("PDF") }}</th>
     </tr>
@@ -29,13 +30,20 @@
       <td>{{ item.exceptions_count }}</td>
       <td>
         <a
+          href="{{ url_for('web.view_report', history_id=item.id) }}"
+          target="_blank"
+          aria-label="{{ _('Ver relatório de %(name)s', name=item.package_name) }}"
+        >{{ _("Relatório") }}</a>
+      </td>
+      <td>
+        <a
           href="#"
           class="csv-download"
           data-history-id="{{ item.id }}"
           data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
           data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
-          aria-label="{{ _('Baixar relatório de %(name)s', name=item.package_name) }}"
-        >{{ _("Relatório") }}</a>
+          aria-label="{{ _('Baixar CSV de %(name)s', name=item.package_name) }}"
+        >{{ _("CSV") }}</a>
       </td>
       <td>
         {% for group in item.html_previews %}

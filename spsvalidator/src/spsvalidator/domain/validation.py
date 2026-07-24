@@ -50,8 +50,9 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
             rows.append({
                 "package": package,
                 "status": "ERROR",
-                "subject": f"Renditions {lang}",
+                "subject": "Renditions",
                 "message": f"{lang} language is mentioned in the XML but its PDF file not present in the package.",
+                "advise": f"Add the {lang} PDF file to the package or remove the {lang} rendition reference from the XML.",
                 "data": rendition,
             })
 
@@ -61,8 +62,9 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
             rows.append({
                 "package": package,
                 "status": "CRITICAL",
-                "subject": name,
+                "subject": "Assets",
                 "message": f"{name} file is mentioned in the XML but not present in the package.",
+                "advise": f"Add the {name} file to the package or remove its reference from the XML.",
                 "data": {**asset, "xml_path": xml_with_pre.filename},
             })
 
@@ -80,7 +82,8 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
             "package": package,
             "status": result.get("response"),
             "subject": result.get("group"),
-            "message": result.get("advice"),
+            "message": result.get("message"),
+            "advise": result.get("advice"),
             "data": dict(result),
         }
         rows.append(row)

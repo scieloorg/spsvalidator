@@ -1,0 +1,327 @@
+
+<!doctype html>
+<html lang="{{ current_locale }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ package_name }} - {{ app_display_name }}</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('web.static', filename='img/icon.png') }}"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        color: #1a1a1a;
+      }
+      h1, h2, h3 { margin: 0 0 12px 0; }
+      .top-bar {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #ddd;
+      }
+      .top-bar h1 { font-size: 1.3rem; }
+      .top-bar a { margin-left: 12px; }
+      .muted { color: #666; }
+      .empty { color: #0b6b0b; font-weight: bold; }
+      .fixed-count { font-weight: normal; color: #0b6b0b; }
+      .link-button {
+        background: none;
+        border: none;
+        padding: 0;
+        margin-left: 10px;
+        color: #a30000;
+        text-decoration: underline;
+        cursor: pointer;
+        font-size: inherit;
+        font-family: inherit;
+      }
+      .severity {
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 18px;
+        border: 1px solid #ddd;
+        border-left-width: 6px;
+      }
+      .severity-critical { border-left-color: #8a1f11; }
+      .severity-error { border-left-color: #a30000; }
+      .severity-warning { border-left-color: #8a6d00; }
+      .severity h2 { font-size: 1.1rem; }
+      .category {
+        margin: 10px 0;
+        padding: 4px 10px;
+        border: 1px solid #eee;
+        border-radius: 6px;
+      }
+      .category summary {
+        cursor: pointer;
+        font-weight: bold;
+        padding: 6px 0;
+      }
+      .problem-group {
+        margin: 8px 0 8px 12px;
+        padding: 4px 10px;
+        border: 1px solid #f0f0f0;
+        border-radius: 6px;
+        background: #fafafa;
+      }
+      .problem-group summary {
+        cursor: pointer;
+        font-weight: normal;
+        padding: 6px 0;
+      }
+      .occurrence {
+        padding: 8px 0;
+        border-top: 1px solid #eee;
+        display: flow-root;
+      }
+      .occurrence:first-of-type { border-top: none; }
+      .occurrence p { margin: 4px 0; }
+      .occurrence.fixed { opacity: 0.55; }
+      .occurrence.fixed p { text-decoration: line-through; }
+      .fixed-toggle {
+        float: right;
+        font-size: 0.85rem;
+        font-weight: normal;
+        color: #444;
+        cursor: pointer;
+        user-select: none;
+      }
+      .fixed-toggle input { margin-right: 4px; }
+      .group-toggle-row {
+        font-size: 0.85rem;
+        color: #444;
+        margin: 2px 0 8px 0;
+        display: flow-root;
+      }
+      .technical-details {
+        margin-top: 6px;
+        font-size: 0.9rem;
+        color: #444;
+      }
+      .technical-details summary { cursor: pointer; font-weight: normal; color: #666; }
+      .technical-details dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 10px;
+        margin: 6px 0 0 0;
+      }
+      .technical-details dt { font-weight: bold; }
+      .technical-details dd { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div class="top-bar">
+      <div>
+        <h1>{{ package_name }}</h1>
+        <p class="muted">{{ _("Relatório de validação agrupado por gravidade e categoria") }}</p>
+        {% set total_occurrences = grouped_report|sum(attribute="count") %}
+        <p class="muted">
+          {{ _("%(total)s ocorrências no total", total=total_occurrences) }}
+          — <span class="fixed-count" data-fixed-count="global">0</span> {{ _("corrigidas") }}
+          {% if grouped_report %}
+          <button type="button" id="clear-fixed-button" class="link-button">{{ _("Limpar marcações") }}</button>
+          {% endif %}
+        </p>
+      </div>
+      <div>
+        <a href="{{ url_for('web.index', history_id=history_id) }}">{{ _("Voltar ao histórico") }}</a>
+        <a href="{{ url_for('web.download_csv', history_id=history_id) }}">{{ _("Baixar CSV") }}</a>
+      </div>
+    </div>
+
+    {% if not grouped_report %}
+    <p class="empty">{{ _("Nenhuma ocorrência encontrada para este pacote.") }}</p>
+    {% endif %}
+
+    {% for group in grouped_report %}
+    <section class="severity severity-{{ group.severity|lower }}">
+      <h2>
+        {{ _(group.severity) }} ({{ group.count }})
+        — <span class="fixed-count" data-fixed-count="scope">0</span> {{ _("corrigidas") }}
+      </h2>
+      {% for category in group.categories %}
+      <details class="category">
+        <summary>
+          {{ category.name }} ({{ category.count }})
+          — <span class="fixed-count" data-fixed-count="scope">0</span> {{ _("corrigidas") }}
+        </summary>
+        {% for problem in category.problems %}
+          {% if problem.count > 1 %}
+          <details class="problem-group">
+            <summary>{{ problem.message }} ({{ _("%(count)s ocorrências", count=problem.count) }})</summary>
+            <p class="group-toggle-row">
+              <label class="fixed-toggle">
+                <input
+                  type="checkbox"
+                  class="fixed-checkbox group-checkbox"
+                  data-group-keys="{{ problem.occurrences|map(attribute='key')|join(',') }}"
+                >{{ _("Marcar todas como corrigidas") }}
+              </label>
+            </p>
+            {% for occurrence in problem.occurrences %}
+            <div class="occurrence" data-key="{{ occurrence.key }}">
+              <label class="fixed-toggle">
+                <input type="checkbox" class="fixed-checkbox" data-key="{{ occurrence.key }}">{{ _("Corrigido") }}
+              </label>
+              <p><strong>{{ _("Ação de correção") }}:</strong> {{ occurrence.advise }}</p>
+              {% if occurrence.details %}
+              <details class="technical-details">
+                <summary>{{ _("Detalhes técnicos") }}</summary>
+                <dl>
+                  {% for key, value in occurrence.details.items() %}
+                  <dt>{{ key }}</dt>
+                  <dd>{{ value }}</dd>
+                  {% endfor %}
+                </dl>
+              </details>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </details>
+          {% else %}
+          {% set occurrence = problem.occurrences[0] %}
+          <div class="occurrence" data-key="{{ occurrence.key }}">
+            <label class="fixed-toggle">
+              <input type="checkbox" class="fixed-checkbox" data-key="{{ occurrence.key }}">{{ _("Corrigido") }}
+            </label>
+            <p><strong>{{ _("Problema") }}:</strong> {{ problem.message }}</p>
+            <p><strong>{{ _("Ação de correção") }}:</strong> {{ occurrence.advise }}</p>
+            {% if occurrence.details %}
+            <details class="technical-details">
+              <summary>{{ _("Detalhes técnicos") }}</summary>
+              <dl>
+                {% for key, value in occurrence.details.items() %}
+                <dt>{{ key }}</dt>
+                <dd>{{ value }}</dd>
+                {% endfor %}
+              </dl>
+            </details>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </details>
+      {% endfor %}
+    </section>
+    {% endfor %}
+
+    <script>
+      var STORAGE_KEY = "spsvalidator-report-" + {{ history_id|tojson }};
+
+      function loadFixedState() {
+        try {
+          return JSON.parse(window.localStorage.getItem(STORAGE_KEY)) || {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function saveFixedState(state) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function applyFixedClass(checkbox) {
+        var occurrence = checkbox.closest(".occurrence");
+        if (occurrence) {
+          occurrence.classList.toggle("fixed", checkbox.checked);
+        }
+      }
+
+      function updateCounts() {
+        var globalCounter = document.querySelector('[data-fixed-count="global"]');
+        if (globalCounter) {
+          globalCounter.textContent = document.querySelectorAll(".fixed-checkbox[data-key]:checked").length;
+        }
+        document.querySelectorAll('[data-fixed-count="scope"]').forEach(function (counter) {
+          var scope = counter.closest(".severity, .category");
+          if (scope) {
+            counter.textContent = scope.querySelectorAll(".fixed-checkbox[data-key]:checked").length;
+          }
+        });
+      }
+
+      function initFixedCheckboxes() {
+        var state = loadFixedState();
+
+        var checkboxes = document.querySelectorAll(".fixed-checkbox[data-key]");
+        checkboxes.forEach(function (checkbox) {
+          checkbox.checked = !!state[checkbox.dataset.key];
+          applyFixedClass(checkbox);
+          checkbox.addEventListener("change", function () {
+            var current = loadFixedState();
+            if (checkbox.checked) {
+              current[checkbox.dataset.key] = true;
+            } else {
+              delete current[checkbox.dataset.key];
+            }
+            saveFixedState(current);
+            applyFixedClass(checkbox);
+            updateCounts();
+          });
+        });
+
+        var groupCheckboxes = document.querySelectorAll(".group-checkbox[data-group-keys]");
+        groupCheckboxes.forEach(function (groupCheckbox) {
+          var keys = groupCheckbox.dataset.groupKeys.split(",").filter(Boolean);
+          groupCheckbox.checked = keys.length > 0 && keys.every(function (key) {
+            return !!state[key];
+          });
+          groupCheckbox.addEventListener("change", function () {
+            var current = loadFixedState();
+            keys.forEach(function (key) {
+              if (groupCheckbox.checked) {
+                current[key] = true;
+              } else {
+                delete current[key];
+              }
+            });
+            saveFixedState(current);
+            keys.forEach(function (key) {
+              var individual = document.querySelector('.fixed-checkbox[data-key="' + key + '"]');
+              if (individual) {
+                individual.checked = groupCheckbox.checked;
+                applyFixedClass(individual);
+              }
+            });
+            updateCounts();
+          });
+        });
+
+        updateCounts();
+      }
+
+      function initClearButton() {
+        var button = document.getElementById("clear-fixed-button");
+        if (!button) {
+          return;
+        }
+        button.addEventListener("click", function () {
+          var confirmed = window.confirm(
+            {{ _("Limpar todas as marcações deste relatório?")|tojson }}
+          );
+          if (!confirmed) {
+            return;
+          }
+          window.localStorage.removeItem(STORAGE_KEY);
+          document.querySelectorAll(".fixed-checkbox").forEach(function (checkbox) {
+            checkbox.checked = false;
+          });
+          document.querySelectorAll(".occurrence.fixed").forEach(function (occurrence) {
+            occurrence.classList.remove("fixed");
+          });
+          updateCounts();
+        });
+      }
+
+      initFixedCheckboxes();
+      initClearButton();
+    </script>
+  </body>
+</html>

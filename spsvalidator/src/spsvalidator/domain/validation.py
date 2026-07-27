@@ -12,6 +12,24 @@ from packtools.sps.validation.xml_validator import get_validation_results
 from spsvalidator.domain.metadata import extract_article_snapshot
 
 
+def _localized_field(result: dict, template_key: str, params_key: str, legacy_key: str) -> str | None:
+    """Formata o texto internacionalizavel do packtools (``msg_text``/``adv_text`` +
+    seus ``_params``), caindo para o campo legado (``message``/``advice``) quando o
+    template nao vier preenchido ou nao puder ser formatado com os parametros dados.
+
+    O fallback nao e um caso raro: ate a packtools#1257 ser concluida, a maioria dos
+    validadores ainda nao preenche esses campos (packtools#1257 documenta que so uma
+    fracao deles passa ``advice_text``/``advice_params`` para ``build_response``).
+    """
+    template = result.get(template_key)
+    if not template:
+        return result.get(legacy_key)
+    try:
+        return template.format(**(result.get(params_key) or {}))
+    except (KeyError, IndexError, ValueError):
+        return result.get(legacy_key)
+
+
 def _extract_journal_data(xmltree):
     try:
         license_code = None
@@ -82,8 +100,8 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
             "package": package,
             "status": result.get("response"),
             "subject": result.get("group"),
-            "message": result.get("message"),
-            "advise": result.get("advice"),
+            "message": _localized_field(result, "msg_text", "msg_params", "message"),
+            "advise": _localized_field(result, "adv_text", "adv_params", "advice"),
             "data": dict(result),
         }
         rows.append(row)

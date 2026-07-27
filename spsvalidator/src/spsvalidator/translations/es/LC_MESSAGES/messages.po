@@ -1,13 +1,14 @@
-# Spanish translations for PROJECT.
+# Spanish translations for spsvalidator.
 # Copyright (C) 2026 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
+# This file is distributed under the same license as the spsvalidator
+# project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: spsvalidator 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-14 10:59-0300\n"
+"POT-Creation-Date: 2026-07-27 19:51-0300\n"
 "PO-Revision-Date: 2026-07-14 10:59-0300\n"
 "Last-Translator: SciELO\n"
 "Language: es\n"
@@ -18,23 +19,140 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: src/spsvalidator/build_metadata.py:16 src/spsvalidator/build_metadata.py:26
+#: src/spsvalidator/build_metadata.py:16 src/spsvalidator/build_metadata.py:30
 #, python-format
 msgid "Compilado para macOS %(version)s"
 msgstr "Compilado para macOS %(version)s"
 
-#: src/spsvalidator/build_metadata.py:28
+#: src/spsvalidator/build_metadata.py:33
 #, python-format
 msgid "Build de desenvolvimento (%(platform)s)"
 msgstr "Build de desarrollo (%(platform)s)"
 
-#: src/spsvalidator/web/routes.py:56
+#: src/spsvalidator/web/routes.py:161
 msgid "Selecione um arquivo .zip para validar."
 msgstr "Seleccione un archivo .zip para validar."
 
-#: src/spsvalidator/web/routes.py:62
+#: src/spsvalidator/web/routes.py:168
 msgid "Apenas arquivos .zip SPS são suportados."
 msgstr "Solo se admiten archivos .zip SPS."
+
+#: src/spsvalidator/web/routes.py:184
+#: src/spsvalidator/web/templates/_history_list.html:7
+msgid "Pacote"
+msgstr "Paquete"
+
+#: src/spsvalidator/web/routes.py:185
+msgid "Gravidade"
+msgstr "Gravedad"
+
+#: src/spsvalidator/web/routes.py:186
+msgid "Categoria"
+msgstr "Categoría"
+
+#: src/spsvalidator/web/routes.py:187
+#: src/spsvalidator/web/templates/report.html:194
+msgid "Problema"
+msgstr "Problema"
+
+#: src/spsvalidator/web/routes.py:188
+#: src/spsvalidator/web/templates/report.html:173
+#: src/spsvalidator/web/templates/report.html:195
+msgid "Ação de correção"
+msgstr "Acción de corrección"
+
+#: src/spsvalidator/web/templates/_history_list.html:2
+#: src/spsvalidator/web/templates/index.html:107
+msgid "Válido"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:2
+#: src/spsvalidator/web/templates/index.html:108
+msgid "Inválido"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:2
+#: src/spsvalidator/web/templates/index.html:109
+msgid "Erro"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:6
+msgid "Data"
+msgstr "Fecha"
+
+#: src/spsvalidator/web/templates/_history_list.html:8
+#: src/spsvalidator/web/templates/index.html:143
+msgid "Status"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:9
+msgid "XMLs"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:10
+msgid "CRITICAL"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:11
+msgid "ERROR"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:12
+msgid "WARNING"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:13
+msgid "Exceptions"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:14
+#: src/spsvalidator/web/templates/_history_list.html:36
+msgid "Relatório"
+msgstr "Informe"
+
+#: src/spsvalidator/web/templates/_history_list.html:15
+#: src/spsvalidator/web/templates/_history_list.html:46
+msgid "CSV"
+msgstr "CSV"
+
+#: src/spsvalidator/web/templates/_history_list.html:16
+msgid "HTML"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:17
+msgid "PDF"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:35
+#, python-format
+msgid "Ver relatório de %(name)s"
+msgstr "Ver informe de %(name)s"
+
+#: src/spsvalidator/web/templates/_history_list.html:45
+#, python-format
+msgid "Baixar CSV de %(name)s"
+msgstr "Descargar CSV de %(name)s"
+
+#: src/spsvalidator/web/templates/_history_list.html:78
+msgid "Nenhum pacote encontrado com esse filtro."
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:80
+msgid "Nenhum pacote validado ainda."
+msgstr "Ningún paquete validado todavía."
+
+#: src/spsvalidator/web/templates/_history_list.html:85
+#, python-format
+msgid "Página %(page)s de %(total_pages)s (%(total)s pacotes)"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:91
+msgid "Anterior"
+msgstr ""
+
+#: src/spsvalidator/web/templates/_history_list.html:98
+msgid "Próxima"
+msgstr ""
 
 #: src/spsvalidator/web/templates/index.html:79
 msgid "Validação de pacotes SPS"
@@ -52,68 +170,102 @@ msgstr ""
 msgid "Pacotes validados"
 msgstr "Paquetes validados"
 
-#: src/spsvalidator/web/templates/index.html:102
-msgid "Data"
-msgstr "Fecha"
-
 #: src/spsvalidator/web/templates/index.html:103
-msgid "Pacote"
-msgstr "Paquete"
-
-#: src/spsvalidator/web/templates/index.html:104
-msgid "XMLs"
-msgstr ""
-
-#: src/spsvalidator/web/templates/index.html:105
-msgid "CRITICAL"
+msgid "Buscar pelo nome do pacote"
 msgstr ""
 
 #: src/spsvalidator/web/templates/index.html:106
-msgid "ERROR"
+msgid "Todos"
 msgstr ""
 
-#: src/spsvalidator/web/templates/index.html:107
-msgid "WARNING"
+#: src/spsvalidator/web/templates/index.html:111
+msgid "Itens por página"
 msgstr ""
 
-#: src/spsvalidator/web/templates/index.html:108
-msgid "Exceptions"
+#: src/spsvalidator/web/templates/index.html:120
+msgid "Buscar"
 msgstr ""
 
-#: src/spsvalidator/web/templates/index.html:109
-#: src/spsvalidator/web/templates/index.html:129
-msgid "Relatório"
-msgstr "Informe"
+#: src/spsvalidator/web/templates/index.html:122
+msgid "Limpar"
+msgstr ""
 
-#: src/spsvalidator/web/templates/index.html:136
-msgid "Nenhum pacote validado ainda."
-msgstr "Ningún paquete validado todavía."
-
-#: src/spsvalidator/web/templates/index.html:143
+#: src/spsvalidator/web/templates/index.html:133
 msgid "Artigos Considerados"
 msgstr "Artículos Considerados"
 
-#: src/spsvalidator/web/templates/index.html:148
+#: src/spsvalidator/web/templates/index.html:138
 msgid "Arquivo XML"
 msgstr "Archivo XML"
 
-#: src/spsvalidator/web/templates/index.html:149
+#: src/spsvalidator/web/templates/index.html:139
 msgid "Título"
 msgstr "Título"
 
-#: src/spsvalidator/web/templates/index.html:150
+#: src/spsvalidator/web/templates/index.html:140
 msgid "Autores"
 msgstr "Autores"
 
-#: src/spsvalidator/web/templates/index.html:153
-msgid "Status"
-msgstr ""
-
-#: src/spsvalidator/web/templates/index.html:179
+#: src/spsvalidator/web/templates/index.html:169
 #, python-brace-format
 msgid "Arquivo salvo em {path}"
 msgstr "Archivo guardado en {path}"
 
-#: src/spsvalidator/web/templates/index.html:180
+#: src/spsvalidator/web/templates/index.html:170
 msgid "Falha ao baixar CSV."
 msgstr "Error al descargar CSV."
+
+#: src/spsvalidator/web/templates/report.html:123
+msgid "Relatório de validação agrupado por gravidade e categoria"
+msgstr "Informe de validación agrupado por gravedad y categoría"
+
+#: src/spsvalidator/web/templates/report.html:126
+#, python-format
+msgid "%(total)s ocorrências no total"
+msgstr "%(total)s ocurrencias en total"
+
+#: src/spsvalidator/web/templates/report.html:127
+#: src/spsvalidator/web/templates/report.html:147
+#: src/spsvalidator/web/templates/report.html:153
+msgid "corrigidas"
+msgstr ""
+
+#: src/spsvalidator/web/templates/report.html:129
+msgid "Limpar marcações"
+msgstr "Borrar marcas"
+
+#: src/spsvalidator/web/templates/report.html:134
+msgid "Voltar ao histórico"
+msgstr "Volver al historial"
+
+#: src/spsvalidator/web/templates/report.html:135
+msgid "Baixar CSV"
+msgstr "Descargar CSV"
+
+#: src/spsvalidator/web/templates/report.html:140
+msgid "Nenhuma ocorrência encontrada para este pacote."
+msgstr "No se encontraron ocurrencias para este paquete."
+
+#: src/spsvalidator/web/templates/report.html:158
+#, python-format
+msgid "%(count)s ocorrências"
+msgstr "%(count)s ocurrencias"
+
+#: src/spsvalidator/web/templates/report.html:165
+msgid "Marcar todas como corrigidas"
+msgstr "Marcar todas como corregidas"
+
+#: src/spsvalidator/web/templates/report.html:171
+#: src/spsvalidator/web/templates/report.html:192
+msgid "Corrigido"
+msgstr "Corregido"
+
+#: src/spsvalidator/web/templates/report.html:176
+#: src/spsvalidator/web/templates/report.html:198
+msgid "Detalhes técnicos"
+msgstr "Detalles técnicos"
+
+#: src/spsvalidator/web/templates/report.html:307
+msgid "Limpar todas as marcações deste relatório?"
+msgstr "¿Borrar todas las marcas de este informe?"
+

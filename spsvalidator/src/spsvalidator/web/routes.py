@@ -208,7 +208,16 @@ def validate():
     except Exception as exc:
         return _render_index(latest_result=None, error_message=str(exc))
 
-    return redirect(url_for("web.index", history_id=result["history_id"]))
+    return redirect(
+        url_for(
+            "web.index",
+            history_id=result["history_id"],
+            q=request.args.get("q") or None,
+            status=request.args.get("status") or None,
+            page_size=request.args.get("page_size") or None,
+            page=request.args.get("page") or None,
+        )
+    )
 
 
 @web_blueprint.get("/validation/<history_id>/report.csv")

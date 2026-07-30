@@ -11,85 +11,217 @@
       href="{{ url_for('web.static', filename='img/icon.png') }}"
     />
     <style>
+      :root {
+        color-scheme: light;
+        --brand: #da202c;
+        --brand-dark: #ad1822;
+        --background: #f5f6f7;
+        --surface: #ffffff;
+        --surface-subtle: #f8f9fa;
+        --border: #dfe3e6;
+        --border-strong: #c7cdd1;
+        --text: #22272a;
+        --text-secondary: #586268;
+        --text-muted: #737d83;
+        --critical: #b91c1c;
+        --error: #c2410c;
+        --warning: #9a6700;
+        --success: #18794e;
+        --success-soft: #ecfdf3;
+        --critical-soft: #fef2f2;
+        --focus: #0969da;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        color: #1a1a1a;
-        min-height: calc(100vh - 40px);
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
       }
-      h1, h2, h3 { margin: 0 0 12px 0; }
-      .top-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 20px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid #ddd;
+
+      h1, h2, h3 {
+        margin: 0 0 12px 0;
+        color: var(--text);
       }
+
+      a {
+        color: var(--brand-dark);
+      }
+
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid rgba(9, 105, 218, .28);
+        outline-offset: 2px;
+      }
+
+      .top-bar {
+        background: var(--surface);
+        border-top: 5px solid var(--brand);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 24px;
+      }
+
       .app-header {
         display: flex;
         align-items: center;
         gap: 16px;
+        max-width: 1180px;
+        margin: 0 auto;
       }
+
       .app-header img {
-        height: 48px;
-        width: 48px;
+        height: 44px;
+        width: 44px;
         object-fit: contain;
       }
-      .app-header h1 { margin: 0; font-size: 1.5rem; }
-      .app-header p { margin: 4px 0 0 0; }
-      .content { flex: 1; }
-      .panel { border: 1px solid #ccc; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-      th { background: #f5f5f5; }
-      .error { color: #a30000; margin-top: 8px; }
-      .status-valid { color: #0b6b0b; font-weight: bold; }
-      .status-invalid, .status-error { color: #8a1f11; font-weight: bold; }
-      .muted { color: #666; }
-      form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-      .articles { margin-top: 10px; }
-      .app-footer {
-        margin-top: 24px;
-        padding-top: 12px;
-        border-top: 1px solid #ddd;
-        text-align: center;
+
+      .app-header h1 { margin: 0; font-size: 1.4rem; }
+      .app-header p { margin: 2px 0 0 0; color: var(--text-muted); font-size: .85rem; }
+
+      .content {
+        flex: 1;
+        width: min(1180px, 100%);
+        margin: 0 auto;
+        padding: 24px 24px 32px;
       }
-      .download-feedback {
-        margin-top: 10px;
-        color: #0b6b0b;
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 18px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 2px rgba(20, 20, 20, .03);
       }
-      .download-feedback.error {
-        color: #a30000;
+
+      .panel h2 {
+        font-size: 1.05rem;
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--border);
       }
-      #validate-button {
+
+      .table-wrap { overflow-x: auto; }
+
+      table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 13px; }
+
+      th, td { padding: 8px 10px; text-align: left; vertical-align: top; }
+
+      thead th {
+        background: var(--surface-subtle);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--border);
+        white-space: nowrap;
+      }
+
+      tbody td { border-bottom: 1px solid var(--border); }
+      tbody tr:hover { background: var(--surface-subtle); }
+
+      .error { color: var(--critical); margin-top: 8px; }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .status-valid .badge { background: var(--success-soft); color: var(--success); }
+      .status-invalid .badge, .status-error .badge { background: var(--critical-soft); color: var(--critical); }
+
+      .muted { color: var(--text-muted); }
+
+      form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+      label { color: var(--text-secondary); font-size: 13px; font-weight: 600; }
+
+      input[type="text"],
+      input[type="number"],
+      input[type="file"],
+      select {
+        min-height: 34px;
+        padding: 6px 10px;
+        border: 1px solid var(--border-strong);
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      input[type="number"] { width: 84px; }
+
+      button, .button {
+        min-height: 34px;
+        padding: 7px 14px;
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        border: 1px solid var(--border-strong);
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
       }
+
+      button:hover { background: var(--surface-subtle); border-color: #aeb5ba; color: var(--text); }
+
+      .button-primary {
+        background: var(--brand);
+        border-color: var(--brand-dark);
+        color: #fff;
+      }
+      .button-primary:hover { background: var(--brand-dark); color: #fff; }
+
+      .articles { margin-top: 10px; }
+
+      .app-footer {
+        margin-top: auto;
+        padding: 16px 24px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .download-feedback { margin-top: 10px; color: var(--success); }
+      .download-feedback.error { color: var(--critical); }
+
       #validate-button:disabled {
         cursor: not-allowed;
-        opacity: 0.7;
+        opacity: .7;
       }
+
       #validate-button .spinner {
         display: none;
         width: 14px;
         height: 14px;
-        border: 2px solid rgba(0, 0, 0, 0.2);
-        border-top-color: #1a1a1a;
+        border: 2px solid rgba(255, 255, 255, .4);
+        border-top-color: #fff;
         border-radius: 50%;
-        animation: spin 0.7s linear infinite;
+        animation: spin .7s linear infinite;
       }
-      #validate-button.is-loading .spinner {
-        display: inline-block;
-      }
+
+      #validate-button.is-loading .spinner { display: inline-block; }
+
       @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        to { transform: rotate(360deg); }
       }
     </style>
   </head>
@@ -112,7 +244,7 @@
         <h2>{{ _("Validar pacote SPS") }}</h2>
         <form method="post" action="/validate" enctype="multipart/form-data" id="validate-form">
           <input type="file" name="package_zip" accept=".zip" required />
-          <button type="submit" id="validate-button">
+          <button type="submit" id="validate-button" class="button button-primary">
             <span class="spinner" aria-hidden="true"></span>
             <span class="button-label">{{ _("Validar") }}</span>
           </button>
@@ -146,7 +278,7 @@
             max="100"
             value="{{ page_size }}"
           >
-          <button type="submit">{{ _("Buscar") }}</button>
+          <button type="submit" class="button">{{ _("Buscar") }}</button>
           {% if name_query or status_query %}
           <a href="/">{{ _("Limpar") }}</a>
           {% endif %}
@@ -160,7 +292,7 @@
       {% if latest_result %}
       <section class="panel">
         <h2>{{ _("Artigos Considerados") }}</h2>
-        <div class="articles">
+        <div class="articles table-wrap">
           <table>
             <thead>
               <tr>

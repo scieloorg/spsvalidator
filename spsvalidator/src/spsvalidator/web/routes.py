@@ -131,6 +131,13 @@ def _parse_int(value, default: int) -> int:
         return default
 
 
+def _page_range(page: int, total_pages: int, window: int = 2) -> list[int]:
+    """Janela de numeros de pagina ao redor da pagina atual, tipo Django."""
+    start = max(1, page - window)
+    end = min(total_pages, page + window)
+    return list(range(start, end + 1))
+
+
 def _paginated_history() -> dict:
     db_path = current_app.config["DB_PATH"]
     name_query = request.args.get("q", "").strip()
@@ -163,6 +170,7 @@ def _paginated_history() -> dict:
         "page_size": page_size,
         "total": total,
         "total_pages": total_pages,
+        "page_range": _page_range(page, total_pages),
     }
 
 

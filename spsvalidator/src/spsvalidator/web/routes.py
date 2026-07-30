@@ -69,6 +69,24 @@ def _html_previews_by_article(package_sha256: str) -> list[dict]:
     return groups
 
 
+def _short_pdf_label(xml_stem: str, filename: str) -> str:
+    """Rótulo curto pra diferenciar PDFs de um mesmo artigo na listagem.
+
+    Os nomes de arquivo compartilham o prefixo `xml_stem` (ex.:
+    "artigo.pdf", "artigo-suppl1.pdf"), o que faz uma lista inteira de
+    nomes completos parecer repetitiva; aqui extraímos só a parte que
+    diferencia cada arquivo.
+    """
+    stem = filename[:-4] if filename.lower().endswith(".pdf") else filename
+    if stem == xml_stem:
+        return gettext("PDF principal")
+    if stem.startswith(xml_stem):
+        suffix = stem[len(xml_stem):].lstrip("-_")
+        if suffix:
+            return suffix
+    return filename
+
+
 def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
     """PDFs extraídos para um pacote, agrupados por artigo (xml_stem).
 
@@ -82,9 +100,14 @@ def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
     for article_dir in sorted(base_dir.iterdir()):
         if not article_dir.is_dir():
             continue
+        xml_stem = article_dir.name
         pdf_names = sorted(p.name for p in (article_dir / "assets").glob("*.pdf"))
         if pdf_names:
-            groups.append({"xml_stem": article_dir.name, "pdf_names": pdf_names})
+            pdfs = [
+                {"filename": name, "label": _short_pdf_label(xml_stem, name)}
+                for name in pdf_names
+            ]
+            groups.append({"xml_stem": xml_stem, "pdfs": pdfs})
     return groups
 
 

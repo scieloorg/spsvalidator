@@ -365,6 +365,9 @@
         var originalLabel = label.textContent;
 
         form.addEventListener("submit", function () {
+          if (window.location.search) {
+            form.action = "/validate" + window.location.search;
+          }
           button.disabled = true;
           button.classList.add("is-loading");
           label.textContent = validatingLabel;

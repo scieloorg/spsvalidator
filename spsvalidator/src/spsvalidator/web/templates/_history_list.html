@@ -85,21 +85,42 @@
 {% endif %}
 {% endif %}
 {% if total > 0 %}
-<p class="pagination muted">
-  {{ _("Página %(page)s de %(total_pages)s (%(total)s pacotes)", page=page, total_pages=total_pages, total=total) }}
-  {% if page > 1 %}
-  <a
-    href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=page - 1) }}"
-    class="page-link"
-    data-page="{{ page - 1 }}"
-  >{{ _("Anterior") }}</a>
-  {% endif %}
-  {% if page < total_pages %}
-  <a
-    href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=page + 1) }}"
-    class="page-link"
-    data-page="{{ page + 1 }}"
-  >{{ _("Próxima") }}</a>
-  {% endif %}
-</p>
+<nav class="pagination" aria-label="{{ _('Paginação') }}">
+  <span class="pagination-info muted">
+    {{ _("Página %(page)s de %(total_pages)s (%(total)s pacotes)", page=page, total_pages=total_pages, total=total) }}
+  </span>
+  <div class="pagination-links">
+    {% if page > 1 %}
+    <a
+      href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=page - 1) }}"
+      class="page-link"
+      data-page="{{ page - 1 }}"
+    >{{ _("Anterior") }}</a>
+    {% else %}
+    <span class="page-link page-link-disabled">{{ _("Anterior") }}</span>
+    {% endif %}
+
+    {% for p in page_range %}
+    {% if p == page %}
+    <span class="page-link page-link-current">{{ p }}</span>
+    {% else %}
+    <a
+      href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=p) }}"
+      class="page-link"
+      data-page="{{ p }}"
+    >{{ p }}</a>
+    {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <a
+      href="{{ url_for('web.index', q=name_query, status=status_query, page_size=page_size, page=page + 1) }}"
+      class="page-link"
+      data-page="{{ page + 1 }}"
+    >{{ _("Próxima") }}</a>
+    {% else %}
+    <span class="page-link page-link-disabled">{{ _("Próxima") }}</span>
+    {% endif %}
+  </div>
+</nav>
 {% endif %}

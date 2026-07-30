@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from flask import (
@@ -111,6 +112,18 @@ def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
     return groups
 
 
+def _format_validated_at(value: str) -> str:
+    """Trunca os microssegundos de "validated_at" pra exibicao na tabela.
+
+    O valor e gravado com datetime.now(UTC).isoformat(), que inclui
+    microssegundos; isso e ruido pra quem esta lendo a lista de historico.
+    """
+    try:
+        return datetime.fromisoformat(value).isoformat(timespec="seconds")
+    except ValueError:
+        return value
+
+
 def _parse_int(value, default: int) -> int:
     try:
         return int(value)
@@ -138,6 +151,7 @@ def _paginated_history() -> dict:
         offset=(page - 1) * page_size,
     )
     for item in history_items:
+        item["validated_at"] = _format_validated_at(item["validated_at"])
         item["html_previews"] = _html_previews_by_article(item["package_sha256"])
         item["pdf_previews"] = _pdf_previews_by_article(item["package_sha256"])
 

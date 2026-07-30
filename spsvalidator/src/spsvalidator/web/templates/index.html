@@ -65,6 +65,32 @@
       .download-feedback.error {
         color: #a30000;
       }
+      #validate-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #validate-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      #validate-button .spinner {
+        display: none;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        border-top-color: #1a1a1a;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      #validate-button.is-loading .spinner {
+        display: inline-block;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -84,9 +110,12 @@
     <main class="content">
       <section class="panel">
         <h2>{{ _("Validar pacote SPS") }}</h2>
-        <form method="post" action="/validate" enctype="multipart/form-data">
+        <form method="post" action="/validate" enctype="multipart/form-data" id="validate-form">
           <input type="file" name="package_zip" accept=".zip" required />
-          <button type="submit">{{ _("Validar") }}</button>
+          <button type="submit" id="validate-button">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="button-label">{{ _("Validar") }}</span>
+          </button>
         </form>
         {% if error_message %}
         <p class="error">{{ error_message }}</p>
@@ -168,6 +197,33 @@
     <script>
       var csvSavedTemplate = {{ _("Arquivo salvo em {path}")|tojson }};
       var csvFailedMessage = {{ _("Falha ao baixar CSV.")|tojson }};
+      var validatingLabel = {{ _("Validando...")|tojson }};
+
+      function bindValidateForm() {
+        var form = document.getElementById("validate-form");
+        var button = document.getElementById("validate-button");
+        if (!form || !button) {
+          return;
+        }
+        var label = button.querySelector(".button-label");
+        var originalLabel = label.textContent;
+
+        form.addEventListener("submit", function () {
+          button.disabled = true;
+          button.classList.add("is-loading");
+          label.textContent = validatingLabel;
+        });
+
+        window.addEventListener("pageshow", function (event) {
+          if (event.persisted) {
+            button.disabled = false;
+            button.classList.remove("is-loading");
+            label.textContent = originalLabel;
+          }
+        });
+      }
+
+      bindValidateForm();
 
       function showDownloadFeedback(message, isError) {
         var feedback = document.getElementById("download-feedback");

@@ -51,15 +51,25 @@
       </td>
       <td>
         {% for group in item.pdf_previews %}
-        {% if item.pdf_previews|length > 1 %}<div class="muted">{{ group.xml_stem }}:</div>{% endif %}
-        {% for pdf_name in group.pdf_names %}
-        <div>
-          <a
-            href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf_name) }}"
-            target="_blank"
-          >{{ pdf_name }}</a>
+        <div class="pdf-group">
+          {% if item.pdf_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+          <div class="pdf-list">
+            {% for pdf in group.pdfs %}
+            <a
+              href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf.filename) }}"
+              target="_blank"
+              class="pdf-chip"
+              title="{{ pdf.filename }}"
+            >
+              <svg class="pdf-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M4 1.5h5l3 3v10a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 .5-.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                <path d="M9 1.5V4a1 1 0 0 0 1 1h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+              </svg>
+              <span>{{ pdf.label }}</span>
+            </a>
+            {% endfor %}
+          </div>
         </div>
-        {% endfor %}
         {% endfor %}
       </td>
     </tr>

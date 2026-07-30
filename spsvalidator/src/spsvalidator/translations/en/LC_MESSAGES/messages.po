@@ -36,6 +36,39 @@ msgstr "Select a .zip file to validate."
 msgid "Apenas arquivos .zip SPS são suportados."
 msgstr "Only SPS .zip files are supported."
 
+#: src/spsvalidator/web/templates/index.html:414
+msgid "Validando..."
+msgstr "Validating..."
+
+#: src/spsvalidator/web/templates/_history_list.html:15
+msgid "Ações"
+msgstr "Actions"
+
+#: src/spsvalidator/web/templates/_history_list.html:37
+#, python-format
+msgid "Baixar CSV de %(name)s"
+msgstr "Download CSV for %(name)s"
+
+#: src/spsvalidator/web/templates/_history_list.html:38
+msgid "Baixar CSV"
+msgstr "Download CSV"
+
+#: src/spsvalidator/web/templates/_history_list.html:44
+msgid "CSV"
+msgstr "CSV"
+
+#: src/spsvalidator/web/templates/_history_list.html:56
+msgid "Pré-visualização HTML"
+msgstr "HTML preview"
+
+#: src/spsvalidator/web/routes.py:83
+msgid "PDF principal"
+msgstr "Main PDF"
+
+#: src/spsvalidator/web/templates/_history_list.html:105
+msgid "Paginação"
+msgstr "Pagination"
+
 #: src/spsvalidator/web/templates/index.html:79
 msgid "Validação de pacotes SPS"
 msgstr "SPS package validation"
@@ -79,11 +112,6 @@ msgstr ""
 #: src/spsvalidator/web/templates/index.html:108
 msgid "Exceptions"
 msgstr ""
-
-#: src/spsvalidator/web/templates/index.html:109
-#: src/spsvalidator/web/templates/index.html:129
-msgid "Relatório"
-msgstr "Report"
 
 #: src/spsvalidator/web/templates/index.html:136
 msgid "Nenhum pacote validado ainda."

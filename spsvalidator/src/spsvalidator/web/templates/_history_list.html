@@ -12,9 +12,7 @@
       <th>{{ _("ERROR") }}</th>
       <th>{{ _("WARNING") }}</th>
       <th>{{ _("Exceptions") }}</th>
-      <th>{{ _("Validação") }}</th>
-      <th>{{ _("HTML") }}</th>
-      <th>{{ _("PDF") }}</th>
+      <th>{{ _("Ações") }}</th>
     </tr>
   </thead>
   <tbody>
@@ -29,48 +27,67 @@
       <td>{{ item.warning_count }}</td>
       <td>{{ item.exceptions_count }}</td>
       <td>
-        <a
-          href="#"
-          class="csv-download"
-          data-history-id="{{ item.id }}"
-          data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
-          data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
-          aria-label="{{ _('Baixar relatório de %(name)s', name=item.package_name) }}"
-        >{{ _("Relatório") }}</a>
-      </td>
-      <td>
-        {% for group in item.html_previews %}
-        {% if item.html_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
-        {% for lang in group.langs %}
-        <a
-          href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
-          target="_blank"
-        >{{ lang }}</a>
-        {% endfor %}
-        {% endfor %}
-      </td>
-      <td>
-        {% for group in item.pdf_previews %}
-        <div class="pdf-group">
-          {% if item.pdf_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
-          <div class="pdf-list">
-            {% for pdf in group.pdfs %}
-            <a
-              href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf.filename) }}"
-              target="_blank"
-              class="pdf-chip"
-              title="{{ pdf.filename }}"
-            >
-              <svg class="pdf-icon" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M4 1.5h5l3 3v10a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 .5-.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
-                <path d="M9 1.5V4a1 1 0 0 0 1 1h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
-              </svg>
-              <span>{{ pdf.label }}</span>
-            </a>
-            {% endfor %}
+        <div class="actions">
+          <a
+            href="#"
+            class="csv-download chip-link"
+            data-history-id="{{ item.id }}"
+            data-download-url="{{ url_for('web.download_csv', history_id=item.id) }}"
+            data-download-filename="{{ item.package_name.rsplit('.', 1)[0] }}.validation.csv"
+            aria-label="{{ _('Baixar CSV de %(name)s', name=item.package_name) }}"
+            title="{{ _('Baixar CSV') }}"
+          >
+            <svg class="chip-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 2v7.5m0 0 2.5-2.5M8 9.5 5.5 7" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M2.5 11v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>{{ _("CSV") }}</span>
+          </a>
+
+          {% for group in item.html_previews %}
+          <div class="action-group">
+            {% if item.html_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+            <div class="chip-list">
+              {% for lang in group.langs %}
+              <a
+                href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
+                target="_blank"
+                class="chip-link"
+                title="{{ _('Pré-visualização HTML') }} ({{ lang }})"
+              >
+                <svg class="chip-icon" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                  <circle cx="8" cy="8" r="1.6" fill="none" stroke="currentColor" stroke-width="1.2" />
+                </svg>
+                <span>HTML {{ lang }}</span>
+              </a>
+              {% endfor %}
+            </div>
           </div>
+          {% endfor %}
+
+          {% for group in item.pdf_previews %}
+          <div class="action-group">
+            {% if item.pdf_previews|length > 1 %}<span class="muted">{{ group.xml_stem }}:</span>{% endif %}
+            <div class="chip-list">
+              {% for pdf in group.pdfs %}
+              <a
+                href="{{ url_for('web.html_preview_asset', history_id=item.id, xml_stem=group.xml_stem, filename=pdf.filename) }}"
+                target="_blank"
+                class="chip-link"
+                title="{{ pdf.filename }}"
+              >
+                <svg class="chip-icon" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 1.5h5l3 3v10a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 .5-.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                  <path d="M9 1.5V4a1 1 0 0 0 1 1h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                </svg>
+                <span>{{ pdf.label }}</span>
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </td>
     </tr>
     {% endfor %}

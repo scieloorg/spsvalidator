@@ -243,6 +243,26 @@
 
       .articles { margin-top: 10px; }
 
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tab {
+        margin-bottom: -1px;
+        padding: 8px 6px;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        background: none;
+        color: var(--text-muted);
+        font-size: 14px;
+      }
+      .tab:hover { background: none; color: var(--text); }
+      .tab[aria-selected="true"] { color: var(--brand-dark); border-bottom-color: var(--brand); }
+      .tab-panel[hidden] { display: none; }
+
       .app-footer {
         margin-top: auto;
         padding: 16px 24px;
@@ -307,72 +327,80 @@
       </section>
 
       <section class="panel">
+        {% if latest_result %}
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab" data-tab-target="articles" role="tab" aria-selected="true">{{ _("Artigos Considerados") }}</button>
+          <button type="button" class="tab" data-tab-target="history" role="tab" aria-selected="false">{{ _("Pacotes validados") }}</button>
+        </div>
+        {% else %}
         <h2>{{ _("Pacotes validados") }}</h2>
-        <form method="get" action="/" class="search-form" id="history-filters">
-          <input
-            type="text"
-            name="q"
-            value="{{ name_query }}"
-            placeholder="{{ _('Buscar pelo nome do pacote') }}"
-          >
-          <select name="status">
-            <option value="" {% if not status_query %}selected{% endif %}>{{ _("Todos") }}</option>
-            <option value="valid" {% if status_query == "valid" %}selected{% endif %}>{{ _("Válido") }}</option>
-            <option value="invalid" {% if status_query == "invalid" %}selected{% endif %}>{{ _("Inválido") }}</option>
-            <option value="error" {% if status_query == "error" %}selected{% endif %}>{{ _("Erro") }}</option>
-          </select>
-          <label for="page-size">{{ _("Itens por página") }}</label>
-          <input
-            type="number"
-            name="page_size"
-            id="page-size"
-            min="1"
-            max="100"
-            value="{{ page_size }}"
-          >
-          <button type="submit" class="button">{{ _("Buscar") }}</button>
-          {% if name_query or status_query %}
-          <a href="/">{{ _("Limpar") }}</a>
-          {% endif %}
-        </form>
-        <div id="history-list">
-          {% include "_history_list.html" %}
-        </div>
-        <p id="download-feedback" class="download-feedback" hidden></p>
-      </section>
+        {% endif %}
 
-      {% if latest_result %}
-      <section class="panel">
-        <h2>{{ _("Artigos Considerados") }}</h2>
-        <div class="articles table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ _("Arquivo XML") }}</th>
-                <th>{{ _("Título") }}</th>
-                <th>{{ _("Autores") }}</th>
-                <th>DOI</th>
-                <th>PID</th>
-                <th>{{ _("Status") }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for article in latest_result.articles %}
-              <tr>
-                <td>{{ article.xml_path }}</td>
-                <td>{{ article.title }}</td>
-                <td>{{ article.authors_text }}</td>
-                <td>{{ article.doi }}</td>
-                <td>{{ article.pid }}</td>
-                <td>{{ article.article_status }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="tab-panel" data-tab-panel="history" {% if latest_result %}hidden{% endif %}>
+          <form method="get" action="/" class="search-form" id="history-filters">
+            <input
+              type="text"
+              name="q"
+              value="{{ name_query }}"
+              placeholder="{{ _('Buscar pelo nome do pacote') }}"
+            >
+            <select name="status">
+              <option value="" {% if not status_query %}selected{% endif %}>{{ _("Todos") }}</option>
+              <option value="valid" {% if status_query == "valid" %}selected{% endif %}>{{ _("Válido") }}</option>
+              <option value="invalid" {% if status_query == "invalid" %}selected{% endif %}>{{ _("Inválido") }}</option>
+              <option value="error" {% if status_query == "error" %}selected{% endif %}>{{ _("Erro") }}</option>
+            </select>
+            <label for="page-size">{{ _("Itens por página") }}</label>
+            <input
+              type="number"
+              name="page_size"
+              id="page-size"
+              min="1"
+              max="100"
+              value="{{ page_size }}"
+            >
+            <button type="submit" class="button">{{ _("Buscar") }}</button>
+            {% if name_query or status_query %}
+            <a href="/">{{ _("Limpar") }}</a>
+            {% endif %}
+          </form>
+          <div id="history-list">
+            {% include "_history_list.html" %}
+          </div>
+          <p id="download-feedback" class="download-feedback" hidden></p>
         </div>
 
+        {% if latest_result %}
+        <div class="tab-panel" data-tab-panel="articles">
+          <div class="articles table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ _("Arquivo XML") }}</th>
+                  <th>{{ _("Título") }}</th>
+                  <th>{{ _("Autores") }}</th>
+                  <th>DOI</th>
+                  <th>PID</th>
+                  <th>{{ _("Status") }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for article in latest_result.articles %}
+                <tr>
+                  <td>{{ article.xml_path }}</td>
+                  <td>{{ article.title }}</td>
+                  <td>{{ article.authors_text }}</td>
+                  <td>{{ article.doi }}</td>
+                  <td>{{ article.pid }}</td>
+                  <td>{{ article.article_status }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
       </section>
-      {% endif %}
     </main>
 
     <footer class="app-footer">
@@ -411,6 +439,26 @@
       }
 
       bindValidateForm();
+
+      function bindTabs() {
+        var tabs = document.querySelectorAll(".tab");
+        if (!tabs.length) {
+          return;
+        }
+        tabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            var target = tab.dataset.tabTarget;
+            tabs.forEach(function (t) {
+              t.setAttribute("aria-selected", String(t === tab));
+            });
+            document.querySelectorAll(".tab-panel").forEach(function (panel) {
+              panel.hidden = panel.dataset.tabPanel !== target;
+            });
+          });
+        });
+      }
+
+      bindTabs();
 
       function showDownloadFeedback(message, isError) {
         var feedback = document.getElementById("download-feedback");

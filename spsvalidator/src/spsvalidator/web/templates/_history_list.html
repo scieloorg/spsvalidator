@@ -1,5 +1,6 @@
 {% if history_items %}
 {% set status_labels = {"valid": _("Válido"), "invalid": _("Inválido"), "error": _("Erro")} %}
+<div class="table-wrap">
 <table>
   <thead>
     <tr>
@@ -21,7 +22,7 @@
     <tr>
       <td><a href="/?history_id={{ item.id }}">{{ item.validated_at }}</a></td>
       <td>{{ item.package_name }}</td>
-      <td class="status-{{ item.status }}">{{ status_labels.get(item.status, item.status) }}</td>
+      <td class="status-{{ item.status }}"><span class="badge">{{ status_labels.get(item.status, item.status) }}</span></td>
       <td>{{ item.xml_count }}</td>
       <td>{{ item.critical_count }}</td>
       <td>{{ item.error_count }}</td>
@@ -65,6 +66,7 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% else %}
 {% if request.args.get("q") or request.args.get("status") %}
 <p class="muted">{{ _("Nenhum pacote encontrado com esse filtro.") }}</p>

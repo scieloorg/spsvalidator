@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: spsvalidator 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-31 09:25-0300\n"
+"POT-Creation-Date: 2026-07-31 09:39-0300\n"
 "PO-Revision-Date: 2026-07-14 10:59-0300\n"
 "Last-Translator: SciELO\n"
 "Language: es\n"
@@ -55,13 +55,13 @@ msgid "Categoria"
 msgstr "Categoría"
 
 #: src/spsvalidator/web/routes.py:241
-#: src/spsvalidator/web/templates/report.html:194
+#: src/spsvalidator/web/templates/report.html:826
 msgid "Problema"
 msgstr "Problema"
 
 #: src/spsvalidator/web/routes.py:242
-#: src/spsvalidator/web/templates/report.html:173
-#: src/spsvalidator/web/templates/report.html:195
+#: src/spsvalidator/web/templates/report.html:798
+#: src/spsvalidator/web/templates/report.html:827
 msgid "Ação de correção"
 msgstr "Acción de corrección"
 
@@ -129,7 +129,6 @@ msgid "Baixar CSV de %(name)s"
 msgstr "Descargar CSV de %(name)s"
 
 #: src/spsvalidator/web/templates/_history_list.html:53
-#: src/spsvalidator/web/templates/report.html:135
 msgid "Baixar CSV"
 msgstr "Descargar CSV"
 
@@ -234,53 +233,83 @@ msgstr "Error al descargar CSV."
 msgid "Validando..."
 msgstr "Validando..."
 
-#: src/spsvalidator/web/templates/report.html:123
+#: src/spsvalidator/web/templates/report.html:663
 msgid "Relatório de validação agrupado por gravidade e categoria"
 msgstr "Informe de validación agrupado por gravedad y categoría"
 
-#: src/spsvalidator/web/templates/report.html:126
-#, python-format
-msgid "%(total)s ocorrências no total"
-msgstr "%(total)s ocurrencias en total"
+#: src/spsvalidator/web/templates/report.html:667
+msgid "Ações do relatório"
+msgstr "Acciones del informe"
 
-#: src/spsvalidator/web/templates/report.html:127
-#: src/spsvalidator/web/templates/report.html:147
-#: src/spsvalidator/web/templates/report.html:153
-msgid "corrigidas"
-msgstr ""
+#: src/spsvalidator/web/templates/report.html:670
+msgid "Histórico"
+msgstr "Historial"
 
-#: src/spsvalidator/web/templates/report.html:129
+#: src/spsvalidator/web/templates/report.html:678
 msgid "Limpar marcações"
 msgstr "Borrar marcas"
 
-#: src/spsvalidator/web/templates/report.html:134
-msgid "Voltar ao histórico"
-msgstr "Volver al historial"
+#: src/spsvalidator/web/templates/report.html:687
+msgid "Resumo do relatório"
+msgstr "Resumen del informe"
 
-#: src/spsvalidator/web/templates/report.html:140
+#: src/spsvalidator/web/templates/report.html:690
+msgid "Total de ocorrências"
+msgstr "Total de ocurrencias"
+
+#: src/spsvalidator/web/templates/report.html:700
+msgid "Corrigidas"
+msgstr "Corregidas"
+
+#: src/spsvalidator/web/templates/report.html:719
+msgid "Filtrar por gravidade"
+msgstr "Filtrar por gravedad"
+
+#: src/spsvalidator/web/templates/report.html:721
+#, python-format
+msgid "Todos (%(count)s)"
+msgstr "Todos (%(count)s)"
+
+#: src/spsvalidator/web/templates/report.html:731
+msgid "Buscar no relatório"
+msgstr "Buscar en el informe"
+
+#: src/spsvalidator/web/templates/report.html:735
+msgid "Buscar problema, ação ou detalhe"
+msgstr "Buscar problema, acción o detalle"
+
+#: src/spsvalidator/web/templates/report.html:741
 msgid "Nenhuma ocorrência encontrada para este pacote."
 msgstr "No se encontraron ocurrencias para este paquete."
 
-#: src/spsvalidator/web/templates/report.html:158
+#: src/spsvalidator/web/templates/report.html:754
+msgid "corrigidas"
+msgstr "corregidas"
+
+#: src/spsvalidator/web/templates/report.html:779
 #, python-format
 msgid "%(count)s ocorrências"
 msgstr "%(count)s ocurrencias"
 
-#: src/spsvalidator/web/templates/report.html:165
+#: src/spsvalidator/web/templates/report.html:788
 msgid "Marcar todas como corrigidas"
 msgstr "Marcar todas como corregidas"
 
-#: src/spsvalidator/web/templates/report.html:171
-#: src/spsvalidator/web/templates/report.html:192
-msgid "Corrigido"
-msgstr "Corregido"
-
-#: src/spsvalidator/web/templates/report.html:176
-#: src/spsvalidator/web/templates/report.html:198
+#: src/spsvalidator/web/templates/report.html:801
+#: src/spsvalidator/web/templates/report.html:830
 msgid "Detalhes técnicos"
 msgstr "Detalles técnicos"
 
-#: src/spsvalidator/web/templates/report.html:307
+#: src/spsvalidator/web/templates/report.html:813
+#: src/spsvalidator/web/templates/report.html:842
+msgid "Corrigido"
+msgstr "Corregido"
+
+#: src/spsvalidator/web/templates/report.html:855
+msgid "Nenhum resultado para os filtros atuais."
+msgstr "No se encontraron resultados para los filtros actuales."
+
+#: src/spsvalidator/web/templates/report.html:963
 msgid "Limpar todas as marcações deste relatório?"
 msgstr "¿Borrar todas las marcas de este informe?"
 
@@ -289,4 +318,7 @@ msgstr "¿Borrar todas las marcas de este informe?"
 
 #~ msgid "PDF"
 #~ msgstr ""
+
+#~ msgid "%(total)s ocorrências no total"
+#~ msgstr "%(total)s ocurrencias en total"
 

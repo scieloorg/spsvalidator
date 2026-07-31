@@ -82,7 +82,7 @@ def _short_pdf_label(xml_stem: str, filename: str) -> str:
     stem = filename[:-4] if filename.lower().endswith(".pdf") else filename
     if stem == xml_stem:
         return gettext("PDF principal")
-    if stem.startswith(xml_stem):
+    if stem.startswith(xml_stem) and stem[len(xml_stem):len(xml_stem) + 1] in ("-", "_"):
         suffix = stem[len(xml_stem):].lstrip("-_")
         if suffix:
             return suffix
@@ -114,13 +114,14 @@ def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
 
 
 def _format_validated_at(value: str) -> str:
-    """Trunca os microssegundos de "validated_at" pra exibicao na tabela.
+    """Formata "validated_at" como "AAAA-MM-DD HH:MM:SS" pra exibicao na tabela.
 
     O valor e gravado com datetime.now(UTC).isoformat(), que inclui
-    microssegundos; isso e ruido pra quem esta lendo a lista de historico.
+    microssegundos e o offset "+00:00"; ambos sao ruido pra quem esta
+    lendo a lista de historico.
     """
     try:
-        return datetime.fromisoformat(value).isoformat(timespec="seconds")
+        return datetime.fromisoformat(value).strftime("%Y-%m-%d %H:%M:%S")
     except ValueError:
         return value
 

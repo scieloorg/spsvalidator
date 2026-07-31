@@ -23,6 +23,7 @@ from spsvalidator.db.repository import (
     list_validations,
 )
 from spsvalidator.domain.export import build_validation_csv
+from spsvalidator.domain.report import build_grouped_report
 from spsvalidator.services.validation_service import run_validation
 
 web_blueprint = Blueprint(
@@ -233,7 +234,14 @@ def download_csv(history_id: str):
     details = get_validation_details(current_app.config["DB_PATH"], history_id)
     if details is None:
         abort(404)
-    csv_content = build_validation_csv(details["rows"])
+    csv_headers = {
+        "package": gettext("Pacote"),
+        "status": gettext("Gravidade"),
+        "subject": gettext("Categoria"),
+        "message": gettext("Problema"),
+        "advise": gettext("Ação de correção"),
+    }
+    csv_content = build_validation_csv(details["rows"], headers=csv_headers)
     response = make_response(csv_content.encode("utf-8"))
     response.headers["Content-Type"] = "application/octet-stream"
     package_stem = details["package_name"].rsplit(".", 1)[0]
@@ -242,6 +250,19 @@ def download_csv(history_id: str):
     )
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@web_blueprint.get("/validation/<history_id>/report.html")
+def view_report(history_id: str):
+    details = get_validation_details(current_app.config["DB_PATH"], history_id)
+    if details is None:
+        abort(404)
+    return render_template(
+        "report.html",
+        history_id=history_id,
+        package_name=details["package_name"],
+        grouped_report=build_grouped_report(details["rows"]),
+    )
 
 
 @web_blueprint.get("/html-preview-assets/<path:filename>")

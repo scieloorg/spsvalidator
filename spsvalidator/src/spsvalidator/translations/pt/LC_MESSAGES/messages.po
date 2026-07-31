@@ -106,7 +106,7 @@ msgid "WARNING"
 msgstr ""
 
 #: src/spsvalidator/web/templates/_history_list.html:14
-msgid "Exceptions"
+msgid "Exceções"
 msgstr ""
 
 #: src/spsvalidator/web/templates/_history_list.html:15
@@ -180,10 +180,13 @@ msgid "Validar"
 msgstr ""
 
 #: src/spsvalidator/web/templates/index.html:334
-msgid "Artigos Considerados"
+msgid "Artigos"
 msgstr ""
 
 #: src/spsvalidator/web/templates/index.html:335
+msgid "Pacotes"
+msgstr ""
+
 #: src/spsvalidator/web/templates/index.html:338
 msgid "Pacotes validados"
 msgstr ""

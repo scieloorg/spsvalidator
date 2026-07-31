@@ -62,7 +62,10 @@ def test_validate_sps_xml_with_pre_flags_missing_asset(tmp_path):
     result = validate_sps_xml_with_pre(xml_with_pre)
 
     critical_rows = [r for r in result["rows"] if r["status"] == "CRITICAL"]
-    assert any(r["subject"] == "fig1.jpg" for r in critical_rows)
+    assert any(
+        r["subject"] == "Assets" and "fig1.jpg" in r["message"]
+        for r in critical_rows
+    )
     assert result["article"]["title"] == "Test Article Title"
 
 
@@ -77,7 +80,10 @@ def test_validate_sps_xml_with_pre_does_not_flag_present_asset(tmp_path):
     result = validate_sps_xml_with_pre(xml_with_pre)
 
     critical_rows = [r for r in result["rows"] if r["status"] == "CRITICAL"]
-    assert not any(r["subject"] == "fig1.jpg" for r in critical_rows)
+    assert not any(
+        r["subject"] == "Assets" and "fig1.jpg" in r["message"]
+        for r in critical_rows
+    )
 
 
 def test_validate_sps_zip_matches_validate_sps_xml_with_pre(tmp_path):

@@ -8,17 +8,20 @@ VALIDATION_CSV_COLUMNS = [
     "status",
     "subject",
     "message",
-    "data",
+    "advise",
 ]
 
+DEFAULT_CSV_HEADERS = {column: column for column in VALIDATION_CSV_COLUMNS}
 
-def build_validation_csv(rows: list[dict]) -> str:
+
+def build_validation_csv(rows: list[dict], headers: dict[str, str] | None = None) -> str:
+    column_headers = {**DEFAULT_CSV_HEADERS, **(headers or {})}
     buffer = io.StringIO()
     writer = csv.DictWriter(
         buffer,
         fieldnames=VALIDATION_CSV_COLUMNS,
         extrasaction="ignore",
     )
-    writer.writeheader()
+    writer.writerow(column_headers)
     writer.writerows(rows)
     return buffer.getvalue()

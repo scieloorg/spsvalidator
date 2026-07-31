@@ -54,11 +54,13 @@ def main() -> None:
         "width": 1360,
         "height": 900,
     }
-    if icon_path.is_file():
-        window_kwargs["icon"] = str(icon_path)
     window_kwargs["js_api"] = DesktopApi(db_path)
     webview.create_window(**window_kwargs)
-    webview.start()
+    webview.start(
+        private_mode=False,
+        storage_path=str(Path(db_path).parent / "webview_data"),
+        icon=str(icon_path) if icon_path.is_file() else None,
+    )
 
 
 if __name__ == "__main__":

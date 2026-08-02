@@ -18,8 +18,11 @@ from flask_babel import gettext
 from packtools import catalogs
 
 from spsvalidator.db.repository import (
+    count_articles,
     count_validations,
+    get_package_name,
     get_validation_details,
+    list_articles,
     list_validations,
 )
 from spsvalidator.domain.export import build_validation_csv
@@ -176,9 +179,60 @@ def _paginated_history() -> dict:
     }
 
 
+def _paginated_articles() -> dict:
+    db_path = current_app.config["DB_PATH"]
+    name_query = request.args.get("article_q", "").strip()
+    doi_query = request.args.get("article_doi", "").strip()
+    pid_query = request.args.get("article_pid", "").strip()
+    status_query = request.args.get("article_status", "").strip()
+    history_id = request.args.get("history_id", "").strip()
+    page_size = _parse_int(request.args.get("article_page_size"), DEFAULT_PAGE_SIZE)
+    page_size = min(MAX_PAGE_SIZE, max(1, page_size))
+    page = max(1, _parse_int(request.args.get("article_page"), 1))
+
+    total = count_articles(
+        db_path, name_query, doi_query, pid_query, status_query, history_id or None
+    )
+    total_pages = max(1, -(-total // page_size))  # ceil division
+    page = min(page, total_pages)
+
+    articles = list_articles(
+        db_path,
+        name_query,
+        doi_query,
+        pid_query,
+        status_query,
+        history_id or None,
+        limit=page_size,
+        offset=(page - 1) * page_size,
+    )
+    for article in articles:
+        article["validated_at"] = _format_validated_at(article["validated_at"])
+
+    return {
+        "articles": articles,
+        "article_name_query": name_query,
+        "article_doi_query": doi_query,
+        "article_pid_query": pid_query,
+        "article_status_query": status_query,
+        "article_history_id": history_id,
+        "article_page": page,
+        "article_page_size": page_size,
+        "article_total": total,
+        "article_total_pages": total_pages,
+        "article_page_range": _page_range(page, total_pages),
+        "selected_package_name": (
+            get_package_name(db_path, history_id) if history_id else None
+        ),
+    }
+
+
 def _render_index(**context):
     context.setdefault("error_message", None)
-    return render_template("index.html", **_paginated_history(), **context)
+    context.setdefault("default_tab", "history")
+    return render_template(
+        "index.html", **_paginated_history(), **_paginated_articles(), **context
+    )
 
 
 @web_blueprint.get("/history-list")
@@ -186,15 +240,15 @@ def history_list():
     return render_template("_history_list.html", **_paginated_history())
 
 
+@web_blueprint.get("/articles-list")
+def articles_list():
+    return render_template("_articles_list.html", **_paginated_articles())
+
+
 @web_blueprint.get("/")
 def index():
-    selected_id = request.args.get("history_id")
-    details = (
-        get_validation_details(current_app.config["DB_PATH"], selected_id)
-        if selected_id
-        else None
-    )
-    return _render_index(latest_result=details)
+    selected_id = request.args.get("history_id", "").strip()
+    return _render_index(default_tab="articles" if selected_id else "history")
 
 
 @web_blueprint.post("/validate")
@@ -203,7 +257,6 @@ def validate():
 
     if uploaded_file is None or not uploaded_file.filename:
         return _render_index(
-            latest_result=None,
             error_message=gettext("Selecione um arquivo .zip para validar."),
         )
 
@@ -216,7 +269,7 @@ def validate():
             html_asset_urls=_html_preview_asset_urls(),
         )
     except Exception as exc:
-        return _render_index(latest_result=None, error_message=str(exc))
+        return _render_index(error_message=str(exc))
 
     return redirect(
         url_for(
@@ -226,6 +279,12 @@ def validate():
             status=request.args.get("status") or None,
             page_size=request.args.get("page_size") or None,
             page=request.args.get("page") or None,
+            article_q=request.args.get("article_q") or None,
+            article_doi=request.args.get("article_doi") or None,
+            article_pid=request.args.get("article_pid") or None,
+            article_status=request.args.get("article_status") or None,
+            article_page_size=request.args.get("article_page_size") or None,
+            article_page=request.args.get("article_page") or None,
         )
     )
 

@@ -141,8 +141,11 @@
         font-size: 11px;
         font-weight: 700;
       }
-      .status-valid .badge { background: var(--success-soft); color: var(--success); }
-      .status-invalid .badge, .status-error .badge { background: var(--critical-soft); color: var(--critical); }
+      .status-valid .badge, .status-ok .badge { background: var(--success-soft); color: var(--success); }
+      .status-invalid .badge, .status-error .badge, .status-issue .badge { background: var(--critical-soft); color: var(--critical); }
+
+      .active-filter { margin-bottom: 12px; }
+      .active-filter a { margin-left: 8px; }
 
       .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
       .action-group { margin-bottom: 2px; }
@@ -329,16 +332,12 @@
       </section>
 
       <section class="panel">
-        {% if latest_result %}
         <div class="tabs" role="tablist">
-          <button type="button" class="tab" data-tab-target="history" role="tab" aria-selected="false">{{ _("Pacotes") }}</button>
-          <button type="button" class="tab" data-tab-target="articles" role="tab" aria-selected="true">{{ _("Artigos") }}</button>
+          <button type="button" class="tab" data-tab-target="history" role="tab" aria-selected="{{ 'true' if default_tab == 'history' else 'false' }}">{{ _("Pacotes") }}</button>
+          <button type="button" class="tab" data-tab-target="articles" role="tab" aria-selected="{{ 'true' if default_tab == 'articles' else 'false' }}">{{ _("Artigos") }}</button>
         </div>
-        {% else %}
-        <h2>{{ _("Pacotes validados") }}</h2>
-        {% endif %}
 
-        <div class="tab-panel" data-tab-panel="history" {% if latest_result %}hidden{% endif %}>
+        <div class="tab-panel" data-tab-panel="history" {% if default_tab != "history" %}hidden{% endif %}>
           <form method="get" action="/" class="search-form" id="history-filters">
             <input
               type="text"
@@ -372,36 +371,49 @@
           <p id="download-feedback" class="download-feedback" hidden></p>
         </div>
 
-        {% if latest_result %}
-        <div class="tab-panel" data-tab-panel="articles">
-          <div class="articles table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{{ _("Arquivo XML") }}</th>
-                  <th>{{ _("Título") }}</th>
-                  <th>{{ _("Autores") }}</th>
-                  <th>DOI</th>
-                  <th>PID</th>
-                  <th>{{ _("Status") }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for article in latest_result.articles %}
-                <tr>
-                  <td>{{ article.xml_path }}</td>
-                  <td>{{ article.title }}</td>
-                  <td>{{ article.authors_text }}</td>
-                  <td>{{ article.doi }}</td>
-                  <td>{{ article.pid }}</td>
-                  <td>{{ article.article_status }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+        <div class="tab-panel" data-tab-panel="articles" {% if default_tab != "articles" %}hidden{% endif %}>
+          <form method="get" action="/" class="search-form" id="article-filters">
+            <input
+              type="text"
+              name="article_q"
+              value="{{ article_name_query }}"
+              placeholder="{{ _('Buscar pelo nome do pacote') }}"
+            >
+            <input
+              type="text"
+              name="article_doi"
+              value="{{ article_doi_query }}"
+              placeholder="DOI"
+            >
+            <input
+              type="text"
+              name="article_pid"
+              value="{{ article_pid_query }}"
+              placeholder="PID"
+            >
+            <select name="article_status">
+              <option value="" {% if not article_status_query %}selected{% endif %}>{{ _("Todos") }}</option>
+              <option value="ok" {% if article_status_query == "ok" %}selected{% endif %}>{{ _("OK") }}</option>
+              <option value="issue" {% if article_status_query == "issue" %}selected{% endif %}>{{ _("Com ocorrências") }}</option>
+            </select>
+            <label for="article-page-size">{{ _("Itens por página") }}</label>
+            <input
+              type="number"
+              name="article_page_size"
+              id="article-page-size"
+              min="1"
+              max="100"
+              value="{{ article_page_size }}"
+            >
+            <button type="submit" class="button">{{ _("Buscar") }}</button>
+            {% if article_name_query or article_doi_query or article_pid_query or article_status_query %}
+            <a href="/">{{ _("Limpar") }}</a>
+            {% endif %}
+          </form>
+          <div id="articles-list">
+            {% include "_articles_list.html" %}
           </div>
         </div>
-        {% endif %}
       </section>
     </main>
 
@@ -532,32 +544,31 @@
       bindCsvDownloads();
       window.addEventListener("pywebviewready", bindCsvDownloads);
 
-      function bindLiveHistoryFilters() {
-        var form = document.getElementById("history-filters");
-        var resultsContainer = document.getElementById("history-list");
+      function bindLiveFilters(config) {
+        var form = document.getElementById(config.formId);
+        var resultsContainer = document.getElementById(config.containerId);
         if (!form || !resultsContainer) {
           return;
         }
-        var searchInput = form.querySelector("input[name='q']");
-        var statusSelect = form.querySelector("select[name='status']");
-        var pageSizeInput = form.querySelector("input[name='page_size']");
+        var pageSizeInput = form.querySelector(config.pageSizeSelector);
         var debounceTimer = null;
-        var currentPage = 1;
 
         function applyFilters(targetPage) {
-          currentPage = targetPage || 1;
           var pageSize = Math.min(100, Math.max(1, parseInt(pageSizeInput.value, 10) || 25));
-          var params = new URLSearchParams();
-          if (searchInput.value.trim()) {
-            params.set("q", searchInput.value.trim());
-          }
-          if (statusSelect.value) {
-            params.set("status", statusSelect.value);
-          }
-          params.set("page_size", pageSize);
-          params.set("page", currentPage);
+          var params = new URLSearchParams(window.location.search);
+          config.fields.forEach(function (field) {
+            var input = form.querySelector(field.selector);
+            var value = input.value.trim();
+            if (value) {
+              params.set(field.name, value);
+            } else {
+              params.delete(field.name);
+            }
+          });
+          params.set(config.pageSizeParam, pageSize);
+          params.set(config.pageParam, targetPage || 1);
           var queryString = params.toString();
-          fetch("/history-list?" + queryString)
+          fetch(config.endpoint + "?" + queryString)
             .then(function (response) {
               return response.text();
             })
@@ -573,16 +584,14 @@
           applyFilters(1);
         });
 
-        searchInput.addEventListener("input", function () {
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(function () {
-            applyFilters(1);
-          }, 350);
-        });
-
-        statusSelect.addEventListener("change", function () {
-          clearTimeout(debounceTimer);
-          applyFilters(1);
+        config.fields.forEach(function (field) {
+          var input = form.querySelector(field.selector);
+          input.addEventListener(field.liveEvent || "input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+              applyFilters(1);
+            }, 350);
+          });
         });
 
         pageSizeInput.addEventListener("input", function () {
@@ -602,7 +611,33 @@
         });
       }
 
-      bindLiveHistoryFilters();
+      bindLiveFilters({
+        formId: "history-filters",
+        containerId: "history-list",
+        endpoint: "/history-list",
+        pageParam: "page",
+        pageSizeParam: "page_size",
+        pageSizeSelector: "input[name='page_size']",
+        fields: [
+          { name: "q", selector: "input[name='q']" },
+          { name: "status", selector: "select[name='status']", liveEvent: "change" },
+        ],
+      });
+
+      bindLiveFilters({
+        formId: "article-filters",
+        containerId: "articles-list",
+        endpoint: "/articles-list",
+        pageParam: "article_page",
+        pageSizeParam: "article_page_size",
+        pageSizeSelector: "input[name='article_page_size']",
+        fields: [
+          { name: "article_q", selector: "input[name='article_q']" },
+          { name: "article_doi", selector: "input[name='article_doi']" },
+          { name: "article_pid", selector: "input[name='article_pid']" },
+          { name: "article_status", selector: "select[name='article_status']", liveEvent: "change" },
+        ],
+      });
     </script>
   </body>
 </html>

@@ -4,12 +4,22 @@ from pathlib import Path
 
 from flask import Flask, current_app, request
 from flask_babel import Babel, get_locale
+from packtools.sps import i18n as packtools_i18n
 
 from spsvalidator.build_metadata import get_footer_build_label
 from spsvalidator.db.repository import init_db
 from spsvalidator.version import APP_DISPLAY_NAME
 from spsvalidator.web import i18n
 from spsvalidator.web.routes import web_blueprint
+
+# Mapeia os codigos de idioma do spsvalidator (web/i18n.SUPPORTED_LANGUAGES)
+# pros nomes de diretorio de catalogo do packtools (packtools/sps/locale/*).
+# Nota: ate o packtools corrigir scieloorg/packtools#1267 (release nao inclui
+# os .mo compilados quando instalado via git), set_locale() aqui fica sem
+# efeito pratico - as mensagens de validacao continuam em ingles mesmo com o
+# locale certo selecionado. O wiring fica pronto pra quando isso for corrigido
+# no packtools.
+_PACKTOOLS_LOCALE_MAP = {"pt": "pt_BR", "en": "en", "es": "es"}
 
 
 def select_locale():
@@ -38,6 +48,10 @@ def create_app(
     app.config["SYSTEM_LANGUAGE"] = system_language
 
     Babel(app, locale_selector=select_locale)
+
+    @app.before_request
+    def sync_packtools_locale():
+        packtools_i18n.set_locale(_PACKTOOLS_LOCALE_MAP.get(str(get_locale()), "en"))
 
     @app.context_processor
     def inject_app_info():

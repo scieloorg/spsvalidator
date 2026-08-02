@@ -175,6 +175,109 @@ def count_validations(
     return int(total)
 
 
+def _articles_filter_clause(
+    name_query: str | None,
+    doi_query: str | None,
+    pid_query: str | None,
+    status: str | None,
+    history_id: str | None,
+) -> tuple[str, list]:
+    conditions = []
+    params: list = []
+    if name_query:
+        conditions.append("LOWER(package_validation_history.package_name) LIKE LOWER(?)")
+        params.append(f"%{name_query}%")
+    if doi_query:
+        conditions.append("LOWER(package_article_snapshot.doi) LIKE LOWER(?)")
+        params.append(f"%{doi_query}%")
+    if pid_query:
+        conditions.append("LOWER(package_article_snapshot.pid) LIKE LOWER(?)")
+        params.append(f"%{pid_query}%")
+    if status:
+        conditions.append("package_article_snapshot.article_status = ?")
+        params.append(status)
+    if history_id:
+        conditions.append("package_article_snapshot.history_id = ?")
+        params.append(history_id)
+    where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+    return where_clause, params
+
+
+def list_articles(
+    db_path: str,
+    name_query: str | None = None,
+    doi_query: str | None = None,
+    pid_query: str | None = None,
+    status: str | None = None,
+    history_id: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    where_clause, params = _articles_filter_clause(
+        name_query, doi_query, pid_query, status, history_id
+    )
+    sql = f"""
+        SELECT
+            package_article_snapshot.id,
+            package_article_snapshot.history_id,
+            package_article_snapshot.xml_path,
+            package_article_snapshot.title,
+            package_article_snapshot.authors_text,
+            package_article_snapshot.doi,
+            package_article_snapshot.pid,
+            package_article_snapshot.article_status,
+            package_article_snapshot.issue_count,
+            package_validation_history.package_name,
+            package_validation_history.validated_at
+        FROM package_article_snapshot
+        JOIN package_validation_history
+            ON package_validation_history.id = package_article_snapshot.history_id
+        {where_clause}
+        ORDER BY datetime(package_validation_history.validated_at) DESC,
+                 package_article_snapshot.xml_path
+        """
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        params = params + [limit, offset]
+
+    with sqlite3.connect(db_path) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(sql, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def count_articles(
+    db_path: str,
+    name_query: str | None = None,
+    doi_query: str | None = None,
+    pid_query: str | None = None,
+    status: str | None = None,
+    history_id: str | None = None,
+) -> int:
+    where_clause, params = _articles_filter_clause(
+        name_query, doi_query, pid_query, status, history_id
+    )
+    sql = f"""
+        SELECT COUNT(*)
+        FROM package_article_snapshot
+        JOIN package_validation_history
+            ON package_validation_history.id = package_article_snapshot.history_id
+        {where_clause}
+        """
+    with sqlite3.connect(db_path) as connection:
+        total = connection.execute(sql, params).fetchone()[0]
+    return int(total)
+
+
+def get_package_name(db_path: str, history_id: str) -> str | None:
+    with sqlite3.connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT package_name FROM package_validation_history WHERE id = ?",
+            (history_id,),
+        ).fetchone()
+    return row[0] if row else None
+
+
 def get_validation_details(db_path: str, history_id: str) -> dict | None:
     with sqlite3.connect(db_path) as connection:
         connection.row_factory = sqlite3.Row

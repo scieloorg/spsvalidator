@@ -13,6 +13,7 @@ def get_footer_build_label() -> str:
         not is_running_from_source()
         and build_info.BUILD_MACOS_VERSION != "development"
         and build_info.BUILD_PLATFORM == "macOS"
+        and platform.system() == "Darwin"
     ):
         return gettext(
             "Compilado para macOS %(version)s",

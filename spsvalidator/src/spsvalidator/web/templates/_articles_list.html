@@ -1,0 +1,85 @@
+{% set article_status_labels = {"ok": _("OK"), "issue": _("Com ocorrências")} %}
+{% if article_history_id %}
+<p class="active-filter muted">
+  {{ _("Filtrando por pacote: %(name)s", name=selected_package_name or article_history_id) }}
+  <a href="{{ url_for('web.index', article_q=article_name_query, article_doi=article_doi_query, article_pid=article_pid_query, article_status=article_status_query) }}">{{ _("Limpar filtro") }}</a>
+</p>
+{% endif %}
+{% if articles %}
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>{{ _("Pacote") }}</th>
+      <th>{{ _("Data da validação") }}</th>
+      <th>{{ _("Arquivo XML") }}</th>
+      <th>{{ _("Título") }}</th>
+      <th>{{ _("Autores") }}</th>
+      <th>DOI</th>
+      <th>PID</th>
+      <th>{{ _("Status") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for article in articles %}
+    <tr>
+      <td><a href="{{ url_for('web.index', history_id=article.history_id) }}">{{ article.package_name }}</a></td>
+      <td>{{ article.validated_at }}</td>
+      <td>{{ article.xml_path }}</td>
+      <td>{{ article.title }}</td>
+      <td>{{ article.authors_text }}</td>
+      <td>{{ article.doi }}</td>
+      <td>{{ article.pid }}</td>
+      <td class="status-{{ article.article_status }}"><span class="badge">{{ article_status_labels.get(article.article_status, article.article_status) }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+{% if article_name_query or article_doi_query or article_pid_query or article_status_query or article_history_id %}
+<p class="muted">{{ _("Nenhum artigo encontrado com esse filtro.") }}</p>
+{% else %}
+<p class="muted">{{ _("Nenhum artigo validado ainda.") }}</p>
+{% endif %}
+{% endif %}
+{% if article_total > 0 %}
+<nav class="pagination" aria-label="{{ _('Paginação') }}">
+  <span class="pagination-info muted">
+    {{ _("Página %(page)s de %(total_pages)s (%(total)s artigos)", page=article_page, total_pages=article_total_pages, total=article_total) }}
+  </span>
+  <div class="pagination-links">
+    {% if article_page > 1 %}
+    <a
+      href="{{ url_for('web.index', article_q=article_name_query, article_doi=article_doi_query, article_pid=article_pid_query, article_status=article_status_query, history_id=article_history_id or None, article_page_size=article_page_size, article_page=article_page - 1) }}"
+      class="page-link"
+      data-page="{{ article_page - 1 }}"
+    >{{ _("Anterior") }}</a>
+    {% else %}
+    <span class="page-link page-link-disabled">{{ _("Anterior") }}</span>
+    {% endif %}
+
+    {% for p in article_page_range %}
+    {% if p == article_page %}
+    <span class="page-link page-link-current">{{ p }}</span>
+    {% else %}
+    <a
+      href="{{ url_for('web.index', article_q=article_name_query, article_doi=article_doi_query, article_pid=article_pid_query, article_status=article_status_query, history_id=article_history_id or None, article_page_size=article_page_size, article_page=p) }}"
+      class="page-link"
+      data-page="{{ p }}"
+    >{{ p }}</a>
+    {% endif %}
+    {% endfor %}
+
+    {% if article_page < article_total_pages %}
+    <a
+      href="{{ url_for('web.index', article_q=article_name_query, article_doi=article_doi_query, article_pid=article_pid_query, article_status=article_status_query, history_id=article_history_id or None, article_page_size=article_page_size, article_page=article_page + 1) }}"
+      class="page-link"
+      data-page="{{ article_page + 1 }}"
+    >{{ _("Próxima") }}</a>
+    {% else %}
+    <span class="page-link page-link-disabled">{{ _("Próxima") }}</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from flask import (
@@ -17,8 +18,11 @@ from flask_babel import gettext
 from packtools import catalogs
 
 from spsvalidator.db.repository import (
+    count_articles,
     count_validations,
+    get_package_name,
     get_validation_details,
+    list_articles,
     list_validations,
 )
 from spsvalidator.domain.export import build_validation_csv
@@ -70,6 +74,24 @@ def _html_previews_by_article(package_sha256: str) -> list[dict]:
     return groups
 
 
+def _short_pdf_label(xml_stem: str, filename: str) -> str:
+    """Rótulo curto pra diferenciar PDFs de um mesmo artigo na listagem.
+
+    Os nomes de arquivo compartilham o prefixo `xml_stem` (ex.:
+    "artigo.pdf", "artigo-suppl1.pdf"), o que faz uma lista inteira de
+    nomes completos parecer repetitiva; aqui extraímos só a parte que
+    diferencia cada arquivo.
+    """
+    stem = filename[:-4] if filename.lower().endswith(".pdf") else filename
+    if stem == xml_stem:
+        return gettext("PDF principal")
+    if stem.startswith(xml_stem) and stem[len(xml_stem):len(xml_stem) + 1] in ("-", "_"):
+        suffix = stem[len(xml_stem):].lstrip("-_")
+        if suffix:
+            return suffix
+    return filename
+
+
 def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
     """PDFs extraídos para um pacote, agrupados por artigo (xml_stem).
 
@@ -83,10 +105,28 @@ def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
     for article_dir in sorted(base_dir.iterdir()):
         if not article_dir.is_dir():
             continue
+        xml_stem = article_dir.name
         pdf_names = sorted(p.name for p in (article_dir / "assets").glob("*.pdf"))
         if pdf_names:
-            groups.append({"xml_stem": article_dir.name, "pdf_names": pdf_names})
+            pdfs = [
+                {"filename": name, "label": _short_pdf_label(xml_stem, name)}
+                for name in pdf_names
+            ]
+            groups.append({"xml_stem": xml_stem, "pdfs": pdfs})
     return groups
+
+
+def _format_validated_at(value: str) -> str:
+    """Formata "validated_at" como "AAAA-MM-DD HH:MM:SS" pra exibicao na tabela.
+
+    O valor e gravado com datetime.now(UTC).isoformat(), que inclui
+    microssegundos e o offset "+00:00"; ambos sao ruido pra quem esta
+    lendo a lista de historico.
+    """
+    try:
+        return datetime.fromisoformat(value).strftime("%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return value
 
 
 def _parse_int(value, default: int) -> int:
@@ -94,6 +134,13 @@ def _parse_int(value, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _page_range(page: int, total_pages: int, window: int = 2) -> list[int]:
+    """Janela de numeros de pagina ao redor da pagina atual, tipo Django."""
+    start = max(1, page - window)
+    end = min(total_pages, page + window)
+    return list(range(start, end + 1))
 
 
 def _paginated_history() -> dict:
@@ -116,6 +163,7 @@ def _paginated_history() -> dict:
         offset=(page - 1) * page_size,
     )
     for item in history_items:
+        item["validated_at"] = _format_validated_at(item["validated_at"])
         item["html_previews"] = _html_previews_by_article(item["package_sha256"])
         item["pdf_previews"] = _pdf_previews_by_article(item["package_sha256"])
 
@@ -127,12 +175,64 @@ def _paginated_history() -> dict:
         "page_size": page_size,
         "total": total,
         "total_pages": total_pages,
+        "page_range": _page_range(page, total_pages),
+    }
+
+
+def _paginated_articles() -> dict:
+    db_path = current_app.config["DB_PATH"]
+    name_query = request.args.get("article_q", "").strip()
+    doi_query = request.args.get("article_doi", "").strip()
+    pid_query = request.args.get("article_pid", "").strip()
+    status_query = request.args.get("article_status", "").strip()
+    history_id = request.args.get("history_id", "").strip()
+    page_size = _parse_int(request.args.get("article_page_size"), DEFAULT_PAGE_SIZE)
+    page_size = min(MAX_PAGE_SIZE, max(1, page_size))
+    page = max(1, _parse_int(request.args.get("article_page"), 1))
+
+    total = count_articles(
+        db_path, name_query, doi_query, pid_query, status_query, history_id or None
+    )
+    total_pages = max(1, -(-total // page_size))  # ceil division
+    page = min(page, total_pages)
+
+    articles = list_articles(
+        db_path,
+        name_query,
+        doi_query,
+        pid_query,
+        status_query,
+        history_id or None,
+        limit=page_size,
+        offset=(page - 1) * page_size,
+    )
+    for article in articles:
+        article["validated_at"] = _format_validated_at(article["validated_at"])
+
+    return {
+        "articles": articles,
+        "article_name_query": name_query,
+        "article_doi_query": doi_query,
+        "article_pid_query": pid_query,
+        "article_status_query": status_query,
+        "article_history_id": history_id,
+        "article_page": page,
+        "article_page_size": page_size,
+        "article_total": total,
+        "article_total_pages": total_pages,
+        "article_page_range": _page_range(page, total_pages),
+        "selected_package_name": (
+            get_package_name(db_path, history_id) if history_id else None
+        ),
     }
 
 
 def _render_index(**context):
     context.setdefault("error_message", None)
-    return render_template("index.html", **_paginated_history(), **context)
+    context.setdefault("default_tab", "history")
+    return render_template(
+        "index.html", **_paginated_history(), **_paginated_articles(), **context
+    )
 
 
 @web_blueprint.get("/history-list")
@@ -140,15 +240,15 @@ def history_list():
     return render_template("_history_list.html", **_paginated_history())
 
 
+@web_blueprint.get("/articles-list")
+def articles_list():
+    return render_template("_articles_list.html", **_paginated_articles())
+
+
 @web_blueprint.get("/")
 def index():
-    selected_id = request.args.get("history_id")
-    details = (
-        get_validation_details(current_app.config["DB_PATH"], selected_id)
-        if selected_id
-        else None
-    )
-    return _render_index(latest_result=details)
+    selected_id = request.args.get("history_id", "").strip()
+    return _render_index(default_tab="articles" if selected_id else "history")
 
 
 @web_blueprint.post("/validate")
@@ -157,7 +257,6 @@ def validate():
 
     if uploaded_file is None or not uploaded_file.filename:
         return _render_index(
-            latest_result=None,
             error_message=gettext("Selecione um arquivo .zip para validar."),
         )
 
@@ -170,9 +269,24 @@ def validate():
             html_asset_urls=_html_preview_asset_urls(),
         )
     except Exception as exc:
-        return _render_index(latest_result=None, error_message=str(exc))
+        return _render_index(error_message=str(exc))
 
-    return redirect(url_for("web.index", history_id=result["history_id"]))
+    return redirect(
+        url_for(
+            "web.index",
+            history_id=result["history_id"],
+            q=request.args.get("q") or None,
+            status=request.args.get("status") or None,
+            page_size=request.args.get("page_size") or None,
+            page=request.args.get("page") or None,
+            article_q=request.args.get("article_q") or None,
+            article_doi=request.args.get("article_doi") or None,
+            article_pid=request.args.get("article_pid") or None,
+            article_status=request.args.get("article_status") or None,
+            article_page_size=request.args.get("article_page_size") or None,
+            article_page=request.args.get("article_page") or None,
+        )
+    )
 
 
 @web_blueprint.get("/validation/<history_id>/report.csv")

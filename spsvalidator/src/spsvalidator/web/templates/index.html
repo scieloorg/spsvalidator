@@ -246,6 +246,14 @@
       }
       .button-primary:hover { background: var(--brand-dark); color: #fff; }
 
+      .app-header .button-danger {
+        margin-left: auto;
+        border-color: #efb2b7;
+        background: #fff1f2;
+        color: var(--brand-dark);
+      }
+      .app-header .button-danger:hover { background: #ffe1e3; color: var(--brand-dark); }
+
       .articles { margin-top: 10px; }
 
       .tabs {
@@ -313,6 +321,11 @@
           <h1>{{ app_display_name }}</h1>
           <p class="muted">{{ _("Validação de pacotes SPS") }}</p>
         </div>
+        {% if execution_mode == "browser" %}
+        <button type="button" id="shutdown-button" class="button button-danger">
+          {{ _("Encerrar SPS Validator") }}
+        </button>
+        {% endif %}
       </header>
     </div>
 
@@ -419,6 +432,9 @@
 
     <footer class="app-footer">
       <p class="muted">{{ footer_build_label }}</p>
+      {% if server_url %}
+      <p class="muted">{{ _("Servidor em execução em %(url)s", url=server_url) }}</p>
+      {% endif %}
     </footer>
     <script>
       var csvSavedTemplate = {{ _("Arquivo salvo em {path}")|tojson }};
@@ -638,6 +654,39 @@
           { name: "article_status", selector: "select[name='article_status']", liveEvent: "change" },
         ],
       });
+
+      function initShutdownButton() {
+        var button = document.getElementById("shutdown-button");
+        if (!button) {
+          return;
+        }
+        button.addEventListener("click", function () {
+          if (!window.confirm({{ _("Encerrar o SPS Validator? O servidor local será finalizado e esta aba deixará de funcionar.")|tojson }})) {
+            return;
+          }
+          button.disabled = true;
+          fetch({{ url_for("web.shutdown")|tojson }}, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: "token=" + encodeURIComponent({{ shutdown_token|tojson }}),
+          })
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("shutdown failed");
+              }
+              document.body.innerHTML =
+                '<p style="padding:48px;text-align:center;font-family:Arial,sans-serif;color:#586268;">' +
+                {{ _("SPS Validator encerrado. Você já pode fechar esta aba.")|tojson }} +
+                "</p>";
+            })
+            .catch(function () {
+              button.disabled = false;
+              window.alert({{ _("Não foi possível encerrar o servidor.")|tojson }});
+            });
+        });
+      }
+
+      initShutdownButton();
     </script>
   </body>
 </html>

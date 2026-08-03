@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
 
 from flask import Flask, current_app, request
@@ -46,6 +47,10 @@ def create_app(
     app.config["BABEL_DEFAULT_LOCALE"] = "pt"
     app.config["EXECUTION_MODE"] = execution_mode
     app.config["SYSTEM_LANGUAGE"] = system_language
+    # Protege a rota web.shutdown: só quem carregou a página (e recebeu o
+    # token embutido no HTML) consegue encerrar o servidor via POST, o que
+    # impede uma página externa de derrubar o app com um POST às cegas.
+    app.config["SHUTDOWN_TOKEN"] = secrets.token_urlsafe(32)
 
     Babel(app, locale_selector=select_locale)
 
@@ -59,6 +64,9 @@ def create_app(
             "app_display_name": app.config["APP_DISPLAY_NAME"],
             "current_locale": str(get_locale()).replace("_", "-"),
             "footer_build_label": get_footer_build_label(),
+            "server_url": app.config.get("SERVER_URL"),
+            "execution_mode": app.config["EXECUTION_MODE"],
+            "shutdown_token": app.config["SHUTDOWN_TOKEN"],
         }
 
     app.register_blueprint(web_blueprint)

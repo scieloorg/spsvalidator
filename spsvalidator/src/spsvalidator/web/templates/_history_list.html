@@ -30,7 +30,7 @@
         <div class="actions">
           <a
             href="{{ url_for('web.view_report', history_id=item.id) }}"
-            target="_blank"
+            {% if execution_mode != "desktop" %}target="_blank"{% endif %}
             class="chip-link"
             aria-label="{{ _('Ver relatório de %(name)s', name=item.package_name) }}"
             title="{{ _('Relatório') }}"
@@ -66,7 +66,7 @@
               {% for lang in group.langs %}
               <a
                 href="{{ url_for('web.view_html_preview', history_id=item.id, xml_stem=group.xml_stem, lang=lang) }}"
-                target="_blank"
+                {% if execution_mode != "desktop" %}target="_blank"{% endif %}
                 class="chip-link"
                 title="{{ _('Pré-visualização HTML') }} ({{ lang }})"
               >

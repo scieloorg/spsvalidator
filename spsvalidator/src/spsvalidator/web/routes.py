@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+import secrets
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -7,6 +10,7 @@ from flask import (
     Blueprint,
     abort,
     current_app,
+    jsonify,
     make_response,
     redirect,
     render_template,
@@ -114,6 +118,27 @@ def _pdf_previews_by_article(package_sha256: str) -> list[dict]:
             ]
             groups.append({"xml_stem": xml_stem, "pdfs": pdfs})
     return groups
+
+
+def _inject_back_banner(html_text: str, back_url: str) -> str:
+    """Insere uma barra 'Voltar ao histórico' logo após a tag <body>.
+
+    Usado só no modo desktop: sem target="_blank", a prévia HTML do
+    packtools substitui o conteúdo da própria janela do pywebview e, sem
+    essa barra, não haveria como voltar ao histórico.
+    """
+    banner = (
+        '<div style="position:sticky;top:0;z-index:99999;padding:8px 14px;'
+        'background:#22272a;font-family:Arial,Helvetica,sans-serif;">'
+        f'<a href="{back_url}" style="color:#fff;text-decoration:none;'
+        'font-size:13px;font-weight:700;">'
+        f"← {gettext('Voltar ao histórico')}</a></div>"
+    )
+    match = re.search(r"<body[^>]*>", html_text, re.IGNORECASE)
+    if not match:
+        return banner + html_text
+    insert_at = match.end()
+    return html_text[:insert_at] + banner + html_text[insert_at:]
 
 
 def _format_validated_at(value: str) -> str:
@@ -344,7 +369,16 @@ def view_html_preview(history_id: str, xml_stem: str, lang: str):
         / details["package_sha256"]
         / xml_stem
     )
-    return send_from_directory(preview_dir, f"{lang}.html")
+
+    if current_app.config["EXECUTION_MODE"] != "desktop":
+        return send_from_directory(preview_dir, f"{lang}.html")
+
+    html_path = preview_dir / f"{lang}.html"
+    if not html_path.is_file():
+        abort(404)
+    html_text = html_path.read_text(encoding="utf-8")
+    back_url = url_for("web.index", history_id=history_id)
+    return _inject_back_banner(html_text, back_url)
 
 
 @web_blueprint.get("/validation/<history_id>/html/<xml_stem>/assets/<path:filename>")
@@ -359,6 +393,23 @@ def html_preview_asset(history_id: str, xml_stem: str, filename: str):
         / "assets"
     )
     return send_from_directory(assets_dir, filename)
+
+
+@web_blueprint.post("/shutdown")
+def shutdown():
+    expected_token = current_app.config.get("SHUTDOWN_TOKEN")
+    submitted_token = request.form.get("token", "")
+    if not expected_token or not secrets.compare_digest(submitted_token, expected_token):
+        abort(403)
+
+    server = current_app.config.get("SERVER")
+    if server is not None:
+        # Agenda o shutdown pra depois da resposta ser enviada; chamar
+        # server.shutdown() aqui bloquearia até o loop serve_forever notar o
+        # pedido, atrasando (ou arriscando cortar) a resposta pro cliente.
+        threading.Timer(0.3, server.shutdown).start()
+
+    return jsonify({"ok": True})
 
 
 @web_blueprint.get("/favicon.ico")

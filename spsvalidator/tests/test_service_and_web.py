@@ -1,4 +1,5 @@
 import io
+import time
 import zipfile
 from pathlib import Path
 
@@ -245,3 +246,36 @@ def test_validate_route_processes_upload(monkeypatch, tmp_path):
     assert "package.zip" in html
     assert "img/icon.png" in html
     assert "SPSValidator-v" in html
+
+
+def test_shutdown_route_rejects_missing_or_invalid_token(tmp_path):
+    app = create_app(str(tmp_path), execution_mode="browser")
+    client = app.test_client()
+
+    assert client.post("/shutdown").status_code == 403
+    assert client.post("/shutdown", data={"token": "token-errado"}).status_code == 403
+
+
+def test_shutdown_route_accepts_valid_token_and_schedules_shutdown(tmp_path):
+    app = create_app(str(tmp_path), execution_mode="browser")
+
+    shutdown_calls = []
+
+    class FakeServer:
+        def shutdown(self):
+            shutdown_calls.append(True)
+
+    app.config["SERVER"] = FakeServer()
+    client = app.test_client()
+
+    response = client.post(
+        "/shutdown", data={"token": app.config["SHUTDOWN_TOKEN"]}
+    )
+    assert response.status_code == 200
+    assert response.get_json() == {"ok": True}
+
+    # server.shutdown() é agendado via threading.Timer(0.3, ...), não
+    # chamado inline (senão bloquearia a resposta desta própria requisição).
+    assert shutdown_calls == []
+    time.sleep(0.5)
+    assert shutdown_calls == [True]

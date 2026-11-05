@@ -42,3 +42,25 @@ def test_unsupported_locale_falls_back_to_packtools_portuguese(tmp_path, monkeyp
     app.test_client().get("/", headers={"Accept-Language": "de-DE"})
 
     assert calls == ["pt_BR"]
+
+_PACKTOOLS_MSGID = (
+    "Missing <alt-text>. Provide a concise textual description of the visual element content."
+)
+
+
+@pytest.mark.parametrize(
+    ("packtools_locale", "expected_prefix"),
+    [
+        ("pt_BR", "Falta o elemento <alt-text>."),
+        ("es", "Falta <alt-text>."),
+    ],
+)
+def test_installed_packtools_ships_compiled_catalogs(packtools_locale, expected_prefix):
+    """Sem mock: o packtools instalado precisa trazer os .mo (packtools#1267)."""
+    try:
+        app_module.packtools_i18n.set_locale(packtools_locale)
+        translated = app_module.packtools_i18n._(_PACKTOOLS_MSGID)
+    finally:
+        app_module.packtools_i18n.set_locale("en")
+
+    assert translated.startswith(expected_prefix)

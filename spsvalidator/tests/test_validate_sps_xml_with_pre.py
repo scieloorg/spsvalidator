@@ -3,6 +3,8 @@ from __future__ import annotations
 import zipfile
 from textwrap import dedent
 
+import pytest
+
 from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
 
 from spsvalidator.domain.validation import validate_sps_xml_with_pre, validate_sps_zip
@@ -96,3 +98,37 @@ def test_validate_sps_zip_matches_validate_sps_xml_with_pre(tmp_path):
     assert aggregate["rows"] == single["rows"]
     assert aggregate["exceptions"] == single["exceptions"]
     assert aggregate["articles"] == [single["article"]]
+
+
+@pytest.mark.parametrize("xml_name", ["article.xml", "package/article.xml", "package/0034-8910-rsp-1-e001.xml"])
+def test_validate_sps_xml_with_pre_counts_every_row_as_article_issue(tmp_path, xml_name):
+    zip_path = tmp_path / "test.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr(xml_name, _article_xml(graphic_href="fig1.jpg"))
+
+    xml_with_pre = next(XMLWithPre.create(path=str(zip_path)))
+    result = validate_sps_xml_with_pre(xml_with_pre)
+
+    assert result["rows"]
+    assert result["article"]["issue_count"] == len(result["rows"])
+    assert result["article"]["article_status"] == "issue"
+
+
+@pytest.mark.parametrize("extra_files", [{}, {"readme.txt": b"x"}])
+def test_validate_sps_xml_with_pre_flags_missing_pdf_regardless_of_other_files(tmp_path, extra_files):
+    zip_path = _make_zip(tmp_path, _article_xml(), extra_files=extra_files)
+
+    xml_with_pre = next(XMLWithPre.create(path=zip_path))
+    result = validate_sps_xml_with_pre(xml_with_pre)
+
+    rendition_rows = [r for r in result["rows"] if r["subject"] == "Renditions"]
+    assert [r["data"]["name"] for r in rendition_rows] == ["article.pdf"]
+
+
+def test_validate_sps_xml_with_pre_does_not_flag_present_pdf(tmp_path):
+    zip_path = _make_zip(tmp_path, _article_xml(), extra_files={"article.pdf": b"%PDF"})
+
+    xml_with_pre = next(XMLWithPre.create(path=zip_path))
+    result = validate_sps_xml_with_pre(xml_with_pre)
+
+    assert not any(r["subject"] == "Renditions" for r in result["rows"])

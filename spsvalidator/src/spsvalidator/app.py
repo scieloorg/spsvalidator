@@ -15,11 +15,6 @@ from spsvalidator.web.routes import web_blueprint
 
 # Mapeia os codigos de idioma do spsvalidator (web/i18n.SUPPORTED_LANGUAGES)
 # pros nomes de diretorio de catalogo do packtools (packtools/sps/locale/*).
-# Nota: ate o packtools corrigir scieloorg/packtools#1267 (release nao inclui
-# os .mo compilados quando instalado via git), set_locale() aqui fica sem
-# efeito pratico - as mensagens de validacao continuam em ingles mesmo com o
-# locale certo selecionado. O wiring fica pronto pra quando isso for corrigido
-# no packtools.
 _PACKTOOLS_LOCALE_MAP = {"pt": "pt_BR", "en": "en", "es": "es"}
 
 
